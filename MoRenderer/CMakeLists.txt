@@ -3,7 +3,7 @@
 #
 
 # 将源代码添加到此项目的可执行文件。
-add_executable (MoRenderer "MoRenderer.cpp" "MoRenderer.h")
+add_executable (MoRenderer "MoRenderer.cpp" "MoRenderer.h" "vector.h"  "matrix.h" "math.h")
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET MoRenderer PROPERTY CXX_STANDARD 20)

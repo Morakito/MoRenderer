@@ -11,5 +11,9 @@ endif()
 
 project ("MoRenderer")
 
+include_directories ("Library")
+
 # 包含子项目。
 add_subdirectory ("MoRenderer")
+
+
