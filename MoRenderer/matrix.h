@@ -289,7 +289,4 @@ inline std::ostream& operator << (std::ostream& os, const Matrix<ROW, COL, T>& m
 
 #pragma endregion
 
-
-
-
 #endif

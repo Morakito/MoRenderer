@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <initializer_list>
 #include <string>
+#include <iostream>
 
 #pragma region 向量定义
 //---------------------------------------------------------------------
@@ -34,6 +35,7 @@ template <typename T> struct Vector<2, T> {
 		T m[2];                // 元素数组
 	};
 	inline Vector() : x(T()), y(T()) {}
+	inline Vector(T X) : x(X), y(X) {}
 	inline Vector(T X, T Y) : x(X), y(Y) {}
 	inline Vector(const Vector<2, T>& u) : x(u.x), y(u.y) {}
 	inline Vector(const T* ptr) : x(ptr[0]), y(ptr[1]) {}
@@ -55,6 +57,7 @@ template <typename T> struct Vector<3, T> {
 		T m[3];                   // 元素数组
 	};
 	inline Vector() : x(T()), y(T()), z(T()) {}
+	inline Vector(T X) : x(X), y(X), z(X) {}
 	inline Vector(T X, T Y, T Z) : x(X), y(Y), z(Z) {}
 	inline Vector(const Vector<3, T>& u) : x(u.x), y(u.y), z(u.z) {}
 	inline Vector(const T* ptr) : x(ptr[0]), y(ptr[1]), z(ptr[2]) {}
@@ -76,6 +79,7 @@ template <typename T> struct Vector<4, T> {
 		T m[4];                      // 元素数组
 	};
 	inline Vector() : x(T()), y(T()), z(T()), w(T()) {}
+	inline Vector(T X) : x(X), y(X), z(X), w(X) {}
 	inline Vector(T X, T Y, T Z, T W) : x(X), y(Y), z(Z), w(W) {}
 	inline Vector(const Vector<4, T>& u) : x(u.x), y(u.y), z(u.z), w(u.w) {}
 	inline Vector(const T* ptr) : x(ptr[0]), y(ptr[1]), z(ptr[2]), w(ptr[3]) {}
@@ -161,6 +165,7 @@ inline Vector<N, T> operator * (const Vector<N, T>& a, T x) {
 	for (size_t i = 0; i < N; i++) b[i] = a[i] * x;
 	return b;
 }
+
 
 // = x * a
 template <size_t N, typename T>
@@ -352,6 +357,19 @@ inline Vector<N, T> vector_clamp(const Vector<N, T>& a, T minx = 0, T maxx = 1) 
 	}
 	return b;
 }
+
+// 输出到文本流
+template<size_t N, typename T>
+inline std::ostream& operator << (std::ostream& os, const Vector<N, T>& a) {
+	os << "[";
+	for (size_t i = 0; i < N; i++) {
+		os << a[i];
+		if (i < N - 1) os << ", ";
+	}
+	os << "]";
+	return os;
+}
+
 
 #pragma endregion
 

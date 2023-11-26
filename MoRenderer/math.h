@@ -10,9 +10,13 @@ typedef Vector<2, int>    Vec2i;
 typedef Vector<3, float>  Vec3f;
 typedef Vector<3, double> Vec3d;
 typedef Vector<3, int>    Vec3i;
-typedef Vector<4, float>  Vec4f;
+typedef Vector<4, float>  Vec4f, ColorRGBA;
 typedef Vector<4, double> Vec4d;
 typedef Vector<4, int>    Vec4i;
+
+typedef Vector<4, uint8_t>    ColorRGBA_32bit;
+
+// 使用ColorRGBA完成颜色计算使用ColorRGBA_32bit完成图像输出
 
 typedef Matrix<4, 4, float> Mat4x4f;
 typedef Matrix<3, 3, float> Mat3x3f;
@@ -47,36 +51,12 @@ template<typename T> inline T Saturate(T x) {
 // 3D 数学运算
 //---------------------------------------------------------------------
 
-// 矢量转整数颜色
-inline static uint32_t vector_to_color(const Vec4f& color) {
-	uint32_t r = (uint32_t)Between(0, 255, (int)(color.r * 255.0f));
-	uint32_t g = (uint32_t)Between(0, 255, (int)(color.g * 255.0f));
-	uint32_t b = (uint32_t)Between(0, 255, (int)(color.b * 255.0f));
-	uint32_t a = (uint32_t)Between(0, 255, (int)(color.a * 255.0f));
-	return (r << 16) | (g << 8) | b | (a << 24);
-}
-
-inline static Vec4i vector_to_color_Vec4i(const Vec4f& color) {
+inline static ColorRGBA_32bit vector_to_32bit_color(const Vec4f& color) {
 	uint8_t r = (uint8_t)Between(0, 255, (int)(color.r * 255.0f));
 	uint8_t g = (uint8_t)Between(0, 255, (int)(color.g * 255.0f));
 	uint8_t b = (uint8_t)Between(0, 255, (int)(color.b * 255.0f));
 	uint8_t a = (uint8_t)Between(0, 255, (int)(color.a * 255.0f));
-	return Vec4i(r, g, b,a);
-}
-
-// 矢量转换整数颜色
-inline static uint32_t vector_to_color(const Vec3f& color) {
-	return vector_to_color(color.xyz1());
-}
-
-// 整数颜色到矢量
-inline static Vec4f vector_from_color(uint32_t rgba) {
-	Vec4f out;
-	out.r = ((rgba >> 16) & 0xff) / 255.0f;
-	out.g = ((rgba >> 8) & 0xff) / 255.0f;
-	out.b = ((rgba >> 0) & 0xff) / 255.0f;
-	out.a = ((rgba >> 24) & 0xff) / 255.0f;
-	return out;
+	return ColorRGBA_32bit(r, g, b, a);
 }
 
 // matrix set to zero

@@ -1,4 +1,4 @@
-#include "./win32.h"
+#include "win32.h"
 
 #include <cassert>
 #include <cstdio>
@@ -10,7 +10,7 @@ static LRESULT CALLBACK msg_callback(HWND hWnd, UINT msg, WPARAM wParam, LPARAM 
 	switch (msg)
 	{
 	case WM_CLOSE:
-		window->is_close = 1;
+		window->is_close = TRUE;
 		break;
 	case WM_KEYDOWN:
 		window->keys[wParam & 511] = 1;
@@ -40,7 +40,6 @@ static LRESULT CALLBACK msg_callback(HWND hWnd, UINT msg, WPARAM wParam, LPARAM 
 	return 0;
 }
 
-
 /*
 	UINT        style;
 	WNDPROC     lpfnWndProc;
@@ -53,7 +52,7 @@ static LRESULT CALLBACK msg_callback(HWND hWnd, UINT msg, WPARAM wParam, LPARAM 
 	LPCSTR      lpszMenuName;
 	LPCSTR      lpszClassName;
 */
-static void register_window_class()
+static void register_window_class(const char* title)
 {
 	ATOM atom;
 	//初始化结构体
@@ -67,7 +66,7 @@ static void register_window_class()
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);				//光标样式
 	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);	//背景样式
 	wc.lpszMenuName = NULL;									//菜单
-	wc.lpszClassName = "SRender_window";					//该窗口类的名字
+	wc.lpszClassName = title;					//该窗口类的名字
 
 	atom = RegisterClass(&wc); //注册窗口类
 	assert(atom != 0);
@@ -86,35 +85,35 @@ static void register_window_class()
 		DWORD      biClrUsed;
 		DWORD      biClrImportant;
 */
-static void init_bm_header(BITMAPINFOHEADER& bi, int width, int height)
+static void init_bm_header(BITMAPINFOHEADER& bitmap, int width, int height)
 {
-	memset(&bi, 0, sizeof(BITMAPINFOHEADER));
-	bi.biSize = sizeof(BITMAPINFOHEADER);
-	bi.biWidth = width;
-	bi.biHeight = -height;   //从上到下
-	bi.biPlanes = 1;
-	bi.biBitCount = 32;
-	bi.biCompression = BI_RGB;
-	bi.biSizeImage = width * height * 4;
+	memset(&bitmap, 0, sizeof(BITMAPINFOHEADER));
+	bitmap.biSize = sizeof(BITMAPINFOHEADER);		//本结构所占用的字节数
+	bitmap.biWidth = width;							//bitmap宽度
+	bitmap.biHeight = -height;						//bitmap高度
+	bitmap.biPlanes = 1;							//目标设备级别
+	bitmap.biBitCount = 32;							//bitmap中一个颜色所占据的bit数
+	bitmap.biCompression = BI_RGB;					//是否压缩，BI_RGB为不压缩
+	bitmap.biSizeImage = width * height * 4;		//整个bitmap所占据的字节数
 }
 
 int window_init(int width, int height, const char* title)
 {
 	window = (window_t*)malloc(sizeof(window_t));
 	memset(window, 0, sizeof(window_t));
-	window->is_close = 0;
+	window->is_close = false;
 
-	RECT rect = { 0, 0, width, height }; //一个矩形范围 左上右下
+	RECT rect = { 0, 0, width, height };	//一个矩形范围 左上右下
 	int wx, wy, sx, sy;
-	LPVOID ptr; //就是void *
-	HDC hDC;    //设备环境，h代表句柄，handle
+	LPVOID ptr;								//就是void *
+	HDC hDC;								//设备环境，h代表句柄，handle
 	BITMAPINFOHEADER bi;
 
 	//注册窗口类
-	register_window_class();
+	register_window_class(title);
 
 	//创建窗口
-	window->h_window = CreateWindow(("SRender_window"), title,
+	window->h_window = CreateWindow(title, title,
 		WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
 		0, 0, 0, 0, NULL, NULL, GetModuleHandle(NULL), NULL);
 	assert(window->h_window != NULL);
@@ -185,8 +184,6 @@ int window_destroy()
 	return 0;
 }
 
-
-
 void msg_dispatch()
 {
 	MSG msg;
@@ -203,41 +200,36 @@ void msg_dispatch()
 
 static void window_display(std::string logMessage)
 {
-	LOGFONT logfont; //改变输出字体
-	ZeroMemory(&logfont, sizeof(LOGFONT));
-	logfont.lfCharSet = ANSI_CHARSET;
-	logfont.lfHeight = 20; //设置字体的大小
-	HFONT hFont = CreateFontIndirect(&logfont);
+	//显示Log信息
+	if (!logMessage.empty()) {
+		LOGFONT logfont;								//改变输出字体
+		ZeroMemory(&logfont, sizeof(LOGFONT));
+		logfont.lfCharSet = ANSI_CHARSET;
+		logfont.lfHeight = 20;							//设置字体的大小
+		HFONT hFont = CreateFontIndirect(&logfont);
 
+		//目标矩形的左上角(x,y), 宽度，高度，上下文指针
+		SelectObject(window->mem_dc, hFont);
+		SetTextColor(window->mem_dc, RGB(190, 190, 190));
+		SetBkColor(window->mem_dc, RGB(80, 80, 80));
+
+		TextOut(window->mem_dc, 20, 20,
+			logMessage.c_str(),
+			strlen(logMessage.c_str()));
+	}
+
+	//绘制framebuffer
 	HDC hDC = GetDC(window->h_window);
-	//目标举行的左上角(x,y), 宽度，高度，上下文指针
-	SelectObject(window->mem_dc, hFont);
-	SetTextColor(window->mem_dc, RGB(190, 190, 190));
-	SetBkColor(window->mem_dc, RGB(80, 80, 80));
-
-	TextOut(window->mem_dc, 20, 20,
-		logMessage.c_str(),
-		strlen(logMessage.c_str()));
 
 	// 把兼容性DC的数据传到真正的DC上
 	BitBlt(hDC, 0, 0, window->width, window->height, window->mem_dc, 0, 0, SRCCOPY);
 	ReleaseDC(window->h_window, hDC);
-
 }
 
 void window_draw(unsigned char* framebuffer, std::string logMessage)
 {
-	int i, j;
-	for (int i = 0; i < window->height; i++)
-	{
-		for (int j = 0; j < window->width; j++)
-		{
-			int index = (i * window->width + j) * 3;
-			window->window_fb[index] = framebuffer[index];
-			window->window_fb[index + 1] = framebuffer[index + 1];
-			window->window_fb[index + 2] = framebuffer[index + 2];
-		}
-	}
+	memcpy(window->window_fb, framebuffer, window->width * window->height * 4);
+
 	window_display(logMessage);
 }
 
