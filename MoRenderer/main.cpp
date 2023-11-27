@@ -5,6 +5,7 @@
 #include "win32.h"
 #include "model.h"
 #include "Texture.h"
+#include "Camera.h"
 
 int main() {
 
@@ -27,23 +28,23 @@ int main() {
 	// 加载贴图
 	Texture* diffuse = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_diffuse.bmp");
 	Texture* normal = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_nm.bmp");
-	Texture* specular = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_spec.bmp"); 
-	 
+	Texture* specular = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_spec.bmp");
+
 	// 设置相机和光源
-	Vec3f eye_pos = { 0, -0.5, 1.7 };			// 相机位置
-	Vec3f eye_at = { 0, 0, 0 };					// 相机看向的位置
-	Vec3f eye_up = { 0, 1, 0 };					// 相机向上的位置
-	Vec3f light_dir = { 1, 1, 0.85 };			// 光照方向
-	float perspective = 3.1415926f * 0.5f;	
 
-	// 设置变换矩阵
-	Mat4x4f mat_model = matrix_set_scale(1, 1, 1);
-	Mat4x4f mat_view = matrix_set_lookat(eye_pos, eye_at, eye_up);
-	Mat4x4f mat_proj = matrix_set_perspective(perspective, 6 / 8.0, 1.0, 500.0f);
-	Mat4x4f mat_mvp = mat_model * mat_view * mat_proj;
+	Vec3f cameraPosition = { 0, -0.5, 1.7 };			// 相机位置
+	Vec3f cameraTarget = { 0, 0, 0 };					// 相机看向的位置
+	Vec3f cameraUp = { 0, 1, 0 };						// 相机向上的位置
+	Vec3f light_dir = { 1, 1, 0.85 };					// 光照方向
+	float fov = 3.1415926f * 0.5f;
 
-	// 用于将法线从模型坐标系变换到世界坐标系
-	Mat4x4f mat_model_it = matrix_invert(mat_model).Transpose();
+
+	Camera* camera = new Camera(cameraPosition, cameraTarget, cameraUp, fov, (float)(width) / height);
+	UniformBuffer uniformBuffer{};
+	uniformBuffer.modelMatrix = matrix_set_scale(1, 1, 1);
+	uniformBuffer.viewMatrix = matrix_set_lookat(cameraPosition, cameraTarget, cameraUp);
+	uniformBuffer.projMatrix = matrix_set_perspective(fov, camera->aspect, camera->nearPlane, camera->nearPlane);
+	uniformBuffer.CalculateRestMatrix();
 
 	// 顶点属性
 	Vertex vs_input[3];
@@ -55,9 +56,9 @@ int main() {
 
 	// 顶点着色器
 	rh->SetVertexShader([&](int index, ShaderContext& output) -> Vec4f {
-		Vec4f vertex = vs_input[index].positionOS.xyz1() * mat_mvp;
+		Vec4f vertex = vs_input[index].positionOS.xyz1() * uniformBuffer.mvpMatrix;
 		// 将顶点位置从模型空间转换为世界坐标系
-		Vec3f positionWS = (vs_input[index].positionOS.xyz1() * mat_model).xyz();
+		Vec3f positionWS = (vs_input[index].positionOS.xyz1() * uniformBuffer.modelMatrix).xyz();
 		output.varying_vec3f[VARYING_POSITIONWS] = positionWS;
 		output.varying_vec2f[VARYING_TEXCOORD] = vs_input[index].texcoord;
 		return vertex;
@@ -68,11 +69,11 @@ int main() {
 	rh->SetPixelShader([&](ShaderContext& input) -> Vec4f {
 		Vec2f uv = input.varying_vec2f[VARYING_TEXCOORD];
 
-		Vec3f worldNormal = (normal->Sample2D(uv) * mat_model_it).xyz();
+		Vec3f worldNormal = (normal->Sample2D(uv) * uniformBuffer.normalMatrix).xyz();
 		Vec3f worldPosition = input.varying_vec3f[VARYING_TEXCOORD];
 
 		Vec3f lightDir = vector_normalize(light_dir);
-		Vec3f viewDir = vector_normalize(lightDir - worldPosition);
+		Vec3f viewDir = vector_normalize(cameraPosition - worldPosition);
 
 		//漫反射
 		Vec4f baseColor = diffuse->Sample2D(uv);
@@ -92,7 +93,11 @@ int main() {
 	{
 		float curr_time = platform_get_time();
 
+		camera->HandleInputEvents();
+		camera->UpdateUniformBuffer(&uniformBuffer);
+
 		// 渲染模型
+		rh->ClearFrameBuffer();
 		for (size_t i = 0; i < model->vertices.size(); i += 3)
 		{
 			// 设置三个顶点的输入，供 VS 读取

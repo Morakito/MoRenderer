@@ -19,20 +19,22 @@ static LRESULT CALLBACK msg_callback(HWND hWnd, UINT msg, WPARAM wParam, LPARAM 
 		window->keys[wParam & 511] = 0;
 		break;
 	case WM_LBUTTONDOWN:
-		window->mouse_info.orbit_pos = get_mouse_pos();
-		window->buttons[0] = 1; break;
+		window->mouse_info.mousePosition = GetMousePosition();
+		window->mouseButtons[0] = 1;
+		break;
 	case WM_LBUTTONUP:
-		window->buttons[0] = 0;
+		window->mouseButtons[0] = 0;
 		break;
 	case WM_RBUTTONDOWN:
-		window->mouse_info.fv_pos = get_mouse_pos();
-		window->buttons[1] = 1;
+		window->mouse_info.mousePosition = GetMousePosition();
+		window->mouseButtons[1] = 1;
 		break;
 	case WM_RBUTTONUP:
-		window->buttons[1] = 0;
+		window->mouseButtons[1] = 0;
 		break;
 	case WM_MOUSEWHEEL:
-		window->mouse_info.wheel_delta = GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+		window->mouseButtons[2] = 1;
+		window->mouse_info.mouseWheelDelta = GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
 		break;
 
 	default: return DefWindowProc(hWnd, msg, wParam, lParam);
@@ -233,12 +235,14 @@ void window_draw(unsigned char* framebuffer, std::string logMessage)
 	window_display(logMessage);
 }
 
-Vec2f get_mouse_pos()
+Vec2f GetMousePosition()
 {
-	POINT point;
-	GetCursorPos(&point);
-	ScreenToClient(window->h_window, &point); // 从屏幕空间转到窗口空间
-	return Vec2f((float)point.x, (float)point.y);
+	POINT mousePoint;
+	GetCursorPos(&mousePoint);
+
+	// 将鼠标位置从屏幕空间转到窗口空间
+	ScreenToClient(window->h_window, &mousePoint);
+	return Vec2f((float)mousePoint.x, (float)mousePoint.y);
 }
 
 /* misc platform functions */
