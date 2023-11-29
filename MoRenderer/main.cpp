@@ -2,7 +2,7 @@
 #include <fstream>
 
 #include "MoRenderer.h"
-#include "win32.h"
+#include "Window.h"
 #include "model.h"
 #include "Texture.h"
 #include "Camera.h"
@@ -12,10 +12,11 @@ int main() {
 	constexpr int width = 600;
 	constexpr int height = 800;
 
-	window_init(width, height, "MoRenderer");
+	Window* window = Window::GetInstance();
+	window->WindowInit(width, height, "MoRenderer");
 
 	int num_frames = 0;
-	float print_time = platform_get_time();
+	float print_time = window->PlatformGetTime();
 	std::string log_message;
 
 
@@ -28,7 +29,7 @@ int main() {
 	// 加载贴图
 	auto* diffuse_map = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_diffuse.bmp");
 	auto* normal_map = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_nm.bmp");
-	auto specular_map = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_spec.bmp");
+	auto* specular_map = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_spec.bmp");
 
 	// 设置相机和光源
 	Vec3f camera_position = { 0, 0, 2 };					// 相机位置
@@ -80,19 +81,18 @@ int main() {
 		Vec4f diffuse = base_color * Saturate(vector_dot(light_dir, world_normal));
 
 		//高光
-		//float _Specluar = specular->Sample2D(uv).b * 5;
-		float _Specluar = 1.0f;
+		float specular_scale = specular_map->Sample2D(uv).b * 5;
 		Vec3f half_dir = vector_normalize(view_dir + light_dir);
 		float intensity = pow(Saturate(vector_dot(world_normal, half_dir)), 20);
-		Vec4f specular = base_color * intensity * _Specluar;
+		Vec4f specular = base_color * intensity * specular_scale;
 
 		Vec4f color = diffuse + specular;
 		return color;
 		});
 
-	while (!window->is_close)
+	while (!window->is_close_)
 	{
-		float current_time = platform_get_time();
+		float current_time = window->PlatformGetTime();
 
 		camera->HandleInputEvents();
 		camera->UpdateUniformBuffer(&uniform_buffer);
@@ -140,8 +140,8 @@ int main() {
 			print_time = current_time;
 		}
 
-		window_draw(image_data, log_message);
-		msg_dispatch();
+		window->WindowDisplay(image_data, log_message);
+		window->MessageDispatch();
 	}
 
 	return 0;

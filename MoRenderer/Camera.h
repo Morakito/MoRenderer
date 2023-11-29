@@ -4,11 +4,12 @@
 #include "math.h"
 
 #include "Shader.h"
+#include "Window.h"
 
 class Camera
 {
 public:
-	Camera(Vec3f position, Vec3f target, Vec3f up, float fov, float aspect);
+	Camera(Vec3f position, const Vec3f& target, Vec3f up, float fov, float aspect);
 	~Camera();
 
 	// 处理输入事件
@@ -25,6 +26,7 @@ private:
 
 
 public:
+	Window* window_;
 	Vec3f position_;					// 相机的世界空间位置
 	Vec3f target_;					// 相机看向的世界空间位置
 	Vec3f up_;						// 相机的up向量
@@ -41,7 +43,7 @@ public:
 	float aspect_;					// 长宽比
 
 	float near_plane_;				// 近裁剪平面
-	float far_plane_;					// 远裁剪平面
+	float far_plane_;				// 远裁剪平面
 };
 
 #endif // !CAMERA_H
