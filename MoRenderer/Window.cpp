@@ -181,13 +181,13 @@ void Window::MessageDispatch()
 	}
 }
 
-void Window::WindowDisplay(const uint8_t* frame_buffer, const std::string& log_message) const
+void Window::WindowDisplay(const uint8_t* frame_buffer, const std::map<std::string, std::string>& log_messages) const
 {
 	memcpy(frame_buffer_, frame_buffer, width_ * height_ * 4);
 
 
 	//显示Log信息
-	if (!log_message.empty()) {
+	if (!log_messages.empty()) {
 		LOGFONT log_font;								//改变输出字体
 		ZeroMemory(&log_font, sizeof(LOGFONT));
 		log_font.lfCharSet = ANSI_CHARSET;
@@ -199,9 +199,16 @@ void Window::WindowDisplay(const uint8_t* frame_buffer, const std::string& log_m
 		SetTextColor(memory_dc_, RGB(190, 190, 190));
 		SetBkColor(memory_dc_, RGB(80, 80, 80));
 
-		TextOut(memory_dc_, 20, 20,
-			log_message.c_str(),
-			strlen(log_message.c_str()));
+		int log_index = 1;
+		for (auto log_message : log_messages)
+		{
+			TextOut(memory_dc_, 20, 20 * (log_index++),
+				log_message.second.c_str(),
+				strlen(log_message.second.c_str()));
+		}
+
+
+
 	}
 
 	//绘制frame buffer

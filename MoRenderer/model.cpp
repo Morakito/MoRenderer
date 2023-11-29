@@ -3,7 +3,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
-Model::Model(const std::string fileName)
+Model::Model(const std::string file_name)
 {
 	{
 		tinyobj::attrib_t attributes;
@@ -11,9 +11,12 @@ Model::Model(const std::string fileName)
 		std::vector<tinyobj::material_t> materials;
 		std::string warn, err;
 
-		if (!tinyobj::LoadObj(&attributes, &shapes, &materials, &warn, &err, fileName.c_str())) {
+		if (!tinyobj::LoadObj(&attributes, &shapes, &materials, &warn, &err, file_name.c_str())) {
 			throw std::runtime_error(warn + err);
 		}
+
+		vertex_number_ = 0;
+		face_number_ = 0;
 
 		for (const auto& shape : shapes) {
 			for (size_t face_id = 0; face_id < shape.mesh.indices.size();) {
@@ -22,7 +25,7 @@ Model::Model(const std::string fileName)
 				for (int i = 0; i < 3; i++) {
 					Vertex vertex{};
 					auto& index = shape.mesh.indices[face_id + i];
-					vertex.positionOS = {
+					vertex.position_os = {
 						attributes.vertices[3 * index.vertex_index + 0],
 						attributes.vertices[3 * index.vertex_index + 1],
 						attributes.vertices[3 * index.vertex_index + 2]
@@ -36,9 +39,11 @@ Model::Model(const std::string fileName)
 						attributes.normals[3 * index.normal_index + 1],
 						attributes.normals[3 * index.normal_index + 2],
 					};
-					vertices.push_back(vertex);
+					vertices_.push_back(vertex);
 				}
 				face_id += 3;
+				vertex_number_ += 3;
+				face_number_ += 1;
 			}
 		}
 	}

@@ -1,7 +1,7 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
-#include <mutex>
+#include <map>
 #include <Windows.h>
 #include "math.h"
 
@@ -25,7 +25,7 @@ public:
 public:
 	void WindowInit(int width, int height, const char* title);
 	void WindowDestroy();
-	void WindowDisplay(const uint8_t* frame_buffer, const std::string& log_message) const;
+	void WindowDisplay(const uint8_t* frame_buffer, const std::map<std::string, std::string>& log_messages) const;
 
 	Vec2f GetMousePosition() const;
 

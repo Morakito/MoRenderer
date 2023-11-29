@@ -6,19 +6,20 @@
 
 
 struct Vertex {
-	Vec3f positionOS;
+	Vec3f position_os;
 	Vec2f texcoord;
 	Vec3f normal;
 };
 
 class Model {
 public:
-
-	Model(const std::string fileName);
+	explicit Model(const std::string file_name);
 
 public:
-	std::vector<Vertex> vertices;
+	std::vector<Vertex> vertices_;
 
+	int vertex_number_;
+	int face_number_;
 };
 
 

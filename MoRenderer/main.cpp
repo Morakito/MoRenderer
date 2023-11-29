@@ -1,11 +1,15 @@
 #include <iostream>
 #include <fstream>
+#include <set>
 
 #include "MoRenderer.h"
 #include "Window.h"
 #include "model.h"
 #include "Texture.h"
 #include "Camera.h"
+
+
+
 
 int main() {
 
@@ -17,19 +21,24 @@ int main() {
 
 	int num_frames = 0;
 	float print_time = window->PlatformGetTime();
-	std::string log_message;
+	std::map<std::string, std::string> log_messages;
+	log_messages["fps_message"] = " ";
+	log_messages["model_message"] = " ";
 
-
-	auto rh = new MoRenderer(width, height);
-	rh->SetRenderState(false, true);
+	const auto mo_renderer = new MoRenderer(width, height);
+	mo_renderer->SetRenderState(false, true);
 	// 加载模型
 	const std::string model_name = "C:/WorkSpace/MoRenderer/models/diablo3_pose.obj";
-	auto model = new Model(model_name);
+	const auto model = new Model(model_name);
+
 
 	// 加载贴图
 	auto* diffuse_map = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_diffuse.bmp");
 	auto* normal_map = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_nm.bmp");
 	auto* specular_map = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_spec.bmp");
+
+	std::string model_message = "vertex count: " + std::to_string(model->vertex_number_) + "  face count: " + std::to_string(model->face_number_) + "\n";
+	log_messages["model_message"] = model_message;
 
 	// 设置相机和光源
 	Vec3f camera_position = { 0, 0, 2 };					// 相机位置
@@ -55,10 +64,10 @@ int main() {
 	};
 
 	// 顶点着色器
-	rh->SetVertexShader([&](const int index, ShaderContext& output) -> Vec4f {
-		Vec4f vertex = uniform_buffer.mvp_matrix * vs_input[index].positionOS.xyz1();
+	mo_renderer->SetVertexShader([&](const int index, ShaderContext& output) -> Vec4f {
+		Vec4f vertex = uniform_buffer.mvp_matrix * vs_input[index].position_os.xyz1();
 		// 将顶点位置从模型空间转换为世界坐标系
-		const Vec3f position_ws = (uniform_buffer.model_matrix * vs_input[index].positionOS.xyz1()).xyz();
+		const Vec3f position_ws = (uniform_buffer.model_matrix * vs_input[index].position_os.xyz1()).xyz();
 
 		output.varying_vec3f[VARYING_POSITION_WS] = position_ws;
 		output.varying_vec2f[VARYING_TEXCOORD] = vs_input[index].texcoord;
@@ -67,7 +76,7 @@ int main() {
 
 
 	// 像素着色器：使用Blinn Phong光照模型
-	rh->SetPixelShader([&](ShaderContext& input) -> Vec4f {
+	mo_renderer->SetPixelShader([&](ShaderContext& input) -> Vec4f {
 		Vec2f uv = input.varying_vec2f[VARYING_TEXCOORD];
 
 		Vec3f world_normal = (normal_map->Sample2D(uv) * uniform_buffer.normal_matrix).xyz();
@@ -98,19 +107,21 @@ int main() {
 		camera->UpdateUniformBuffer(&uniform_buffer);
 
 		// 渲染模型
-		rh->ClearFrameBuffer();
-		for (size_t i = 0; i < model->vertices.size(); i += 3)
+		mo_renderer->ClearFrameBuffer();
+		for (size_t i = 0; i < model->vertices_.size(); i += 3)
 		{
 			// 设置三个顶点的输入，供 VS 读取
 			for (int j = 0; j < 3; j++) {
-				vs_input[j].positionOS = model->vertices[i + j].positionOS;
-				vs_input[j].texcoord = model->vertices[i + j].texcoord;
-				vs_input[j].normal = model->vertices[i + j].normal;
+				vs_input[j].position_os = model->vertices_[i + j].position_os;
+				vs_input[j].texcoord = model->vertices_[i + j].texcoord;
+				vs_input[j].normal = model->vertices_[i + j].normal;
 			}
 
 			// 绘制三角形
-			rh->DrawTriangle();
+			mo_renderer->DrawTriangle();
 		}
+
+
 
 		// 计算并显示FPS
 		num_frames += 1;
@@ -118,15 +129,17 @@ int main() {
 			int sum_millis = (int)((current_time - print_time) * 1000);
 			int avg_millis = sum_millis / num_frames;
 
-			log_message = "FPS: " + std::to_string(num_frames) + " / " + std::to_string(avg_millis) + " ms";
-
+			std::string fps_message = "FPS: " + std::to_string(num_frames) + " / " + std::to_string(avg_millis) + " ms";
+			
+			log_messages["fps_message"] = fps_message;
 			num_frames = 0;
 			print_time = current_time;
 		}
 
 		// 显示图像
-		window->WindowDisplay(rh->color_buffer_, log_message);
+		window->WindowDisplay(mo_renderer->color_buffer_, log_messages);
 		window->MessageDispatch();
+
 	}
 
 	return 0;
