@@ -1,5 +1,4 @@
-#ifndef VECTOR_H
-#define VECTOR_H
+#pragma once
 
 #include <assert.h>
 #include <initializer_list>
@@ -14,16 +13,16 @@
 //N维向量模板
 template <size_t N, typename T> struct Vector {
 	T m[N];    // 元素数组
-	inline Vector() { for (size_t i = 0; i < N; i++) m[i] = T(); }
-	inline Vector(const T* ptr) { for (size_t i = 0; i < N; i++) m[i] = ptr[i]; }
-	inline Vector(const Vector<N, T>& u) { for (size_t i = 0; i < N; i++) m[i] = u.m[i]; }
-	inline Vector(const std::initializer_list<T>& u) {
+	Vector() { for (size_t i = 0; i < N; i++) m[i] = T(); }
+	explicit Vector(const T* ptr) { for (size_t i = 0; i < N; i++) m[i] = ptr[i]; }
+	Vector(const Vector<N, T>& u) { for (size_t i = 0; i < N; i++) m[i] = u.m[i]; }
+	Vector(const std::initializer_list<T>& u) {
 		auto it = u.begin(); for (size_t i = 0; i < N; i++) m[i] = *it++;
 	}
-	inline const T& operator[] (size_t i) const { assert(i < N); return m[i]; }
-	inline T& operator[] (size_t i) { assert(i < N); return m[i]; }
-	inline void load(const T* ptr) { for (size_t i = 0; i < N; i++) m[i] = ptr[i]; }
-	inline void save(T* ptr) { for (size_t i = 0; i < N; i++) ptr[i] = m[i]; }
+	const T& operator[] (size_t i) const { assert(i < N); return m[i]; }
+	T& operator[] (size_t i) { assert(i < N); return m[i]; }
+	void load(const T* ptr) { for (size_t i = 0; i < N; i++) m[i] = ptr[i]; }
+	void save(T* ptr) { for (size_t i = 0; i < N; i++) ptr[i] = m[i]; }
 };
 
 
@@ -372,6 +371,3 @@ inline std::ostream& operator << (std::ostream& os, const Vector<N, T>& a) {
 
 
 #pragma endregion
-
-
-#endif // !VECTOR_H

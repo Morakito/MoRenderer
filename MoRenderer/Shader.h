@@ -5,19 +5,19 @@
 
 struct UniformBuffer
 {
-	Mat4x4f modelMatrix;
-	Mat4x4f viewMatrix;
-	Mat4x4f projMatrix;
-	Mat4x4f mvpMatrix;
+	Mat4x4f model_matrix;
+	Mat4x4f view_matrix;
+	Mat4x4f proj_matrix;
+	Mat4x4f mvp_matrix;
 
-	Mat4x4f normalMatrix;
+	Mat4x4f normal_matrix;
 
 	void CalculateRestMatrix() {
-		mvpMatrix = modelMatrix * viewMatrix * projMatrix;
+		mvp_matrix = proj_matrix* view_matrix * model_matrix;
 
 		// 用于将法线从模型空间变换到世界空间
 		// 使用原始变换矩阵的逆转置矩阵
-		normalMatrix = matrix_invert(modelMatrix).Transpose();
+		normal_matrix = matrix_invert(model_matrix).Transpose();
 	}
 };
 

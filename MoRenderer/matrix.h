@@ -104,6 +104,8 @@ template<size_t ROW, size_t COL, typename T> struct Matrix {
 #pragma region 矩阵运算
 //---------------------------------------------------------------------
 // 数学库：矩阵运算
+// 矩阵采用行主序：即m[row][col]代表右上角元素
+// 矩阵乘法使用“左乘”
 //---------------------------------------------------------------------
 template<size_t ROW, size_t COL, typename T>
 inline bool operator == (const Matrix<ROW, COL, T>& a, const Matrix<ROW, COL, T>& b) {

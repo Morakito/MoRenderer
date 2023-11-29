@@ -1,102 +1,125 @@
 ﻿#include "MoRenderer.h"
 
-void MoRenderer::CleanUp() {
-	// 清空着色器
-	vertex_shader = NULL;
-	pixel_shader = NULL;
+#include <ranges>
 
-	// 清空framebuffer
-	if (color_buffer) {
-		for (int j = 0; j < framebuffer_height; j++) {
-			if (color_buffer[j]) delete[]color_buffer[j];
-			color_buffer[j] = NULL;
+void MoRenderer::CleanUp()
+{
+	// 清空着色器
+	vertex_shader_ = nullptr;
+	pixel_shader_ = nullptr;
+
+	// 清空frame buffer
+	if (color_buffer_) {
+		for (int j = 0; j < frame_buffer_height_; j++) {
+			if (color_buffer_[j]) delete[]color_buffer_[j];
+			color_buffer_[j] = nullptr;
 		}
-		delete[]color_buffer;
-		color_buffer = NULL;
+		delete[]color_buffer_;
+		color_buffer_ = nullptr;
 	}
 
-	if (depth_buffer) {
-		for (int j = 0; j < framebuffer_height; j++) {
-			if (depth_buffer[j]) delete[]depth_buffer[j];
-			depth_buffer[j] = NULL;
+	if (depth_buffer_) {
+		for (int j = 0; j < frame_buffer_height_; j++) {
+			if (depth_buffer_[j]) delete[]depth_buffer_[j];
+			depth_buffer_[j] = nullptr;
 		}
-		delete[]depth_buffer;
-		depth_buffer = NULL;
+		delete[]depth_buffer_;
+		depth_buffer_ = nullptr;
 	}
 }
 
-void MoRenderer::Init(int width, int height) {
+void MoRenderer::Init(const int width, const int height)
+{
 
-	framebuffer_width = width;
-	framebuffer_height = height;
+	frame_buffer_width_ = width;
+	frame_buffer_height_ = height;
 
 	// 初始化背景色和前景色
-	color_foreground = Vec4f(1.0f);
-	color_background = Vec4f(0.5f, 1.0f, 1.0f, 1.0f);
+	color_foreground_ = Vec4f(0.0f);
+	color_background_ = Vec4f(0.5f, 1.0f, 1.0f, 1.0f);
 
-	color_buffer = new Vec4f * [height];
+	color_buffer_ = new Vec4f * [height];
 	for (int j = 0; j < height; j++) {
-		color_buffer[j] = new Vec4f[width];
+		color_buffer_[j] = new Vec4f[width];
 	}
 
-	depth_buffer = new float* [height];
+	depth_buffer_ = new float* [height];
 	for (int j = 0; j < height; j++) {
-		depth_buffer[j] = new float[width];
+		depth_buffer_[j] = new float[width];
 	}
 
 	ClearFrameBuffer();
 }
 
-void MoRenderer::ClearFrameBuffer() {
-	if (color_buffer) {
-		for (int j = 0; j < framebuffer_height; j++) {
-			for (int i = 0; i < framebuffer_width; i++)
-				color_buffer[j][i] = color_background;
+void MoRenderer::ClearFrameBuffer() const
+{
+	if (color_buffer_) {
+		for (int j = 0; j < frame_buffer_height_; j++) {
+			for (int i = 0; i < frame_buffer_width_; i++)
+				color_buffer_[j][i] = color_background_;
 		}
 	}
-	if (depth_buffer) {
-		for (int j = 0; j < framebuffer_height; j++) {
-			for (int i = 0; i < framebuffer_width; i++)
-				depth_buffer[j][i] = 0.0f;
+	if (depth_buffer_) {
+		for (int j = 0; j < frame_buffer_height_; j++) {
+			for (int i = 0; i < frame_buffer_width_; i++)
+				depth_buffer_[j][i] = 0.0f;
 		}
 	}
 }
 
-void MoRenderer::DrawLine(int x1, int y1, int x2, int y2, Vec4f color) {
+void MoRenderer::DrawLine(int x1, int y1, int x2, int y2, const Vec4f& color) const
+{
 	int x, y;
 	if (x1 == x2 && y1 == y2) {
 		SetPixel(x1, y1, color);
 		return;
 	}
 	else if (x1 == x2) {
-		int inc = (y1 <= y2) ? 1 : -1;
-		for (y = y1; y != y2; y += inc) SetPixel(x1, y, color);
+		const int dir = (y1 <= y2) ? 1 : -1;
+		for (y = y1; y != y2; y += dir) SetPixel(x1, y, color);
 		SetPixel(x2, y2, color);
 	}
 	else if (y1 == y2) {
-		int inc = (x1 <= x2) ? 1 : -1;
-		for (x = x1; x != x2; x += inc) SetPixel(x, y1, color);
+		const int dir = (x1 <= x2) ? 1 : -1;
+		for (x = x1; x != x2; x += dir) SetPixel(x, y1, color);
 		SetPixel(x2, y2, color);
 	}
 	else {
-		int dx = (x1 < x2) ? x2 - x1 : x1 - x2;
-		int dy = (y1 < y2) ? y2 - y1 : y1 - y2;
+		// 选择绘制的主轴，沿着跨度较大的轴进行绘制
+		const int dx = (x1 < x2) ? x2 - x1 : x1 - x2;
+		const int dy = (y1 < y2) ? y2 - y1 : y1 - y2;
 		int rem = 0;
 		if (dx >= dy) {
-			if (x2 < x1) x = x1, y = y1, x1 = x2, y1 = y2, x2 = x, y2 = y;
+			// 交换(x1, y1)和(x1, y1)，使得x1较小
+			if (x2 < x1) {
+				std::swap(x1, x2);
+				std::swap(y1, y2);
+				x = x1; y = y1;
+			}
 			for (x = x1, y = y1; x <= x2; x++) {
 				SetPixel(x, y, color);
 				rem += dy;
-				if (rem >= dx) { rem -= dx; y += (y2 >= y1) ? 1 : -1; SetPixel(x, y, color); }
+				if (rem >= dx) {
+					rem -= dx;
+					y += (y2 >= y1) ? 1 : -1; SetPixel(x, y, color);
+				}
 			}
 			SetPixel(x2, y2, color);
 		}
 		else {
-			if (y2 < y1) x = x1, y = y1, x1 = x2, y1 = y2, x2 = x, y2 = y;
+			// 交换(x1, y1)和(x1, y1)，使得y1较小
+			if (y2 < y1) {
+				std::swap(x1, x2);
+				std::swap(y1, y2);
+				x = x1; y = y1;
+			}
 			for (x = x1, y = y1; y <= y2; y++) {
 				SetPixel(x, y, color);
 				rem += dx;
-				if (rem >= dy) { rem -= dy; x += (x2 >= x1) ? 1 : -1; SetPixel(x, y, color); }
+				if (rem >= dy) {
+					rem -= dy;
+					x += (x2 >= x1) ? 1 : -1; SetPixel(x, y, color);
+				}
 			}
 			SetPixel(x2, y2, color);
 		}
@@ -104,214 +127,183 @@ void MoRenderer::DrawLine(int x1, int y1, int x2, int y2, Vec4f color) {
 }
 
 bool MoRenderer::DrawTriangle() {
-	if (color_buffer == NULL || vertex_shader == NULL)return false;
+	if (color_buffer_ == nullptr || vertex_shader_ == nullptr) return false;
 
-	// 三角形外接矩形
-	int bounding_minX, bounding_minY, bounding_maxX, bounding_maxY;
+	// 三角形屏幕空间中的外接矩形
+	Vec2i bounding_min(0), bounding_max(0);
 
-	// 顶点初始化
+	Vertex* vertex[3] = { &vertex_[0], &vertex_[1], &vertex_[2] };
+	// 顶点数据初始化
 	for (int k = 0; k < 3; k++) {
-		Vertex& vertex = _vertex[k];
+		auto& [context, w_reciprocal, position, screen_position_f, screen_position_i] = *vertex[k];
 
 		// 清空上下文 varying 列表
-		vertex.context.varying_float.clear();
-		vertex.context.varying_vec2f.clear();
-		vertex.context.varying_vec3f.clear();
-		vertex.context.varying_vec4f.clear();
+		context.varying_float.clear();
+		context.varying_vec2f.clear();
+		context.varying_vec3f.clear();
+		context.varying_vec4f.clear();
 
-		// 运行顶点着色程序，返回顶点坐标
-		vertex.pos = vertex_shader(k, vertex.context);
+		// 执行顶点着色程序，返回裁剪空间中的顶点坐标，此时没有进行透视除法
+		position = vertex_shader_(k, context);
 
-		// 简单裁剪，任何一个顶点超过 CVV 就剔除
-		float w = vertex.pos.w;
-
-		// 这里图简单，当一个点越界，立马放弃整个三角形，更精细的做法是
-		// 如果越界了就在齐次空间内进行裁剪，拆分为 0-2 个三角形然后继续
+		// 裁剪clip：三角形的任何一个顶点超过CVV就直接剔除
+		float w = position.w;
 		if (w == 0.0f) return false;
-		if (vertex.pos.z < 0.0f || vertex.pos.z > w) return false;
-		if (vertex.pos.x < -w || vertex.pos.x > w) return false;
-		if (vertex.pos.y < -w || vertex.pos.y > w) return false;
+		if (position.z < -w || position.z > w) return false;
+		if (position.x < -w || position.x > w) return false;
+		if (position.y < -w || position.y > w) return false;
 
-		// 计算 w 的倒数：Reciprocal of the Homogeneous W 
-		vertex.rhw = 1.0f / w;
+		// 透视除法
+		w_reciprocal = 1.0f / w;
+		position *= w_reciprocal;
 
-		// 齐次坐标空间 /w 归一化到单位体积 cvv
-		vertex.pos *= vertex.rhw;
+		// 屏幕映射：计算屏幕坐标（窗口坐标。详见RTR4 章节2.3.4
+		screen_position_f.x = (position.x + 1.0f) * static_cast<float>(frame_buffer_width_) * 0.5f;
+		screen_position_f.y = (position.y + 1.0f) * static_cast<float>(frame_buffer_height_) * 0.5f;
 
-		// 计算屏幕坐标
-		vertex.spf.x = (vertex.pos.x + 1.0f) * framebuffer_width * 0.5f;
-		vertex.spf.y = (1.0f - vertex.pos.y) * framebuffer_height * 0.5f;
+		// 计算整数屏幕坐标：d = floor(c)
+		screen_position_i.x = static_cast<int>(floor(screen_position_f.x));
+		screen_position_i.y = static_cast<int>(floor(screen_position_f.y));
 
-		// 整数屏幕坐标：加 0.5 的偏移取屏幕像素方格中心对齐
-		vertex.spi.x = (int)(vertex.spf.x + 0.5f);
-		vertex.spi.y = (int)(vertex.spf.y + 0.5f);
+		//计算整数屏幕坐标：c = d + 0.5
+		screen_position_f.x = screen_position_i.x + 0.5f;
+		screen_position_f.y = screen_position_i.y + 0.5f;
 
-		// 更新外接矩形范围
+		// 更新外接矩形
 		if (k == 0) {
-			bounding_minX = bounding_maxX = Between(0, framebuffer_width - 1, vertex.spi.x);
-			bounding_minY = bounding_maxY = Between(0, framebuffer_height - 1, vertex.spi.y);
+			bounding_min.x = bounding_max.x = Between(0, frame_buffer_width_ - 1, screen_position_i.x);
+			bounding_min.y = bounding_max.y = Between(0, frame_buffer_height_ - 1, screen_position_i.y);
 		}
 		else {
-			bounding_minX = Between(0, framebuffer_width - 1, Min(bounding_minX, vertex.spi.x));
-			bounding_maxX = Between(0, framebuffer_width - 1, Max(bounding_maxX, vertex.spi.x));
-			bounding_minY = Between(0, framebuffer_height - 1, Min(bounding_minY, vertex.spi.y));
-			bounding_maxY = Between(0, framebuffer_height - 1, Max(bounding_maxY, vertex.spi.y));
+			bounding_min.x = Between(0, frame_buffer_width_ - 1, Min(bounding_min.x, screen_position_i.x));
+			bounding_max.x = Between(0, frame_buffer_width_ - 1, Max(bounding_max.x, screen_position_i.x));
+			bounding_min.y = Between(0, frame_buffer_height_ - 1, Min(bounding_min.y, screen_position_i.y));
+			bounding_max.y = Between(0, frame_buffer_height_ - 1, Max(bounding_max.y, screen_position_i.y));
 		}
 	}
 
-	// 绘制线框
-	if (render_frame) {
-		DrawLine(_vertex[0].spi.x, _vertex[0].spi.y, _vertex[1].spi.x, _vertex[1].spi.y);
-		DrawLine(_vertex[0].spi.x, _vertex[0].spi.y, _vertex[2].spi.x, _vertex[2].spi.y);
-		DrawLine(_vertex[2].spi.x, _vertex[2].spi.y, _vertex[1].spi.x, _vertex[1].spi.y);
-	}
+	// 只绘制线框，不绘制像素，直接退出
+	if (render_frame_ && !render_pixel_) {
+		DrawLine(vertex[0]->screen_position_i.x, vertex[0]->screen_position_i.y, vertex[1]->screen_position_i.x, vertex[1]->screen_position_i.y);
+		DrawLine(vertex[0]->screen_position_i.x, vertex[0]->screen_position_i.y, vertex[2]->screen_position_i.x, vertex[2]->screen_position_i.y);
+		DrawLine(vertex[2]->screen_position_i.x, vertex[2]->screen_position_i.y, vertex[1]->screen_position_i.x, vertex[1]->screen_position_i.y);
 
-	// 如果不填充像素就退出
-	if (render_pixel == false) return false;
-
-	// 判断三角形朝向
-	Vec4f v01 = _vertex[1].pos - _vertex[0].pos;
-	Vec4f v02 = _vertex[2].pos - _vertex[0].pos;
-	Vec4f normal = vector_cross(v01, v02);
-
-	// 使用 vtx 访问三个顶点，而不直接用 _vertex 访问，因为可能会调整顺序
-	Vertex* vtx[3] = { &_vertex[0], &_vertex[1], &_vertex[2] };
-
-	// 如果背向视点，则交换顶点，保证 edge equation 判断的符号为正
-	if (normal.z > 0.0f) {
-		vtx[1] = &_vertex[2];
-		vtx[2] = &_vertex[1];
-	}
-	else if (normal.z == 0.0f) {
 		return false;
 	}
 
+	/*
+	* 裁剪空间，背面剔除：
+	*
+	* 在观察空间中进行判断，观察空间使用右手坐标系，即相机看向z轴负方向
+	* 判断三角形朝向，剔除背对相机的三角形
+	* 由于相机看向z轴负方向，因此三角形法线的z分量为负，说明背对相机
+	*
+	* 顶点顺序：
+	* obj格式中默认的顶点顺序是逆时针，即顶点v1，v2，v3按照逆时针顺序排列
+	*/
+	Vec4f vector_01 = vertex[1]->position - vertex[0]->position;
+	Vec4f vector_02 = vertex[2]->position - vertex[0]->position;
+	Vec4f normal = vector_cross(vector_01, vector_02);
+	if (normal.z <= 0) return false;
+
 	// 保存三个端点位置
-	Vec2i p0 = vtx[0]->spi;
-	Vec2i p1 = vtx[1]->spi;
-	Vec2i p2 = vtx[2]->spi;
+	Vec2f p0 = vertex[0]->screen_position_f;
+	Vec2f p1 = vertex[1]->screen_position_f;
+	Vec2f p2 = vertex[2]->screen_position_f;
 
-	// 计算面积，为零就退出
-	float s = Abs(vector_cross(p1 - p0, p2 - p0));
-	if (s <= 0) return false;
+	// 屏幕空间，退化三角形剔除
+	float triangle_area = Abs(vector_cross(p1 - p0, p2 - p0));
+	if (triangle_area <= 0) return false;
 
-	// 三角形填充时，左面和上面的边上的点需要包括，右方和下方边上的点不包括
-	// 先判断是否是 TopLeft，判断出来后会和下方 Edge Equation 一起决策
-	bool TopLeft01 = IsTopLeft(p0, p1);
-	bool TopLeft12 = IsTopLeft(p1, p2);
-	bool TopLeft20 = IsTopLeft(p2, p0);
+	// 构建边缘方程
+	Vec2f bottom_left_point = { static_cast<float>(bounding_min.x) + 0.5f,static_cast<float>(bounding_min.y) + 0.5f };
+	auto* edge_equation_01 = new EdgeEquation(p0, p1, bottom_left_point, vertex[2]->w_reciprocal);
+	auto* edge_equation_12 = new EdgeEquation(p1, p2, bottom_left_point, vertex[0]->w_reciprocal);
+	auto* edge_equation_20 = new EdgeEquation(p2, p0, bottom_left_point, vertex[1]->w_reciprocal);
+
+	float bc_denominator =
+		edge_equation_01->origin * edge_equation_01->w_reciprocal +
+		edge_equation_12->origin * edge_equation_12->w_reciprocal +
+		edge_equation_20->origin * edge_equation_20->w_reciprocal;
+	bc_denominator = 1 / bc_denominator;
 
 	// 迭代三角形外接矩形的所有点
-	for (int cy = bounding_minY; cy <= bounding_maxY; cy++) {
-		for (int cx = bounding_minX; cx <= bounding_maxX; cx++) {
-			Vec2f px = { (float)cx + 0.5f, (float)cy + 0.5f };
+	for (int y = bounding_min.y; y <= bounding_max.y; y++) {
+		for (int x = bounding_min.x; x <= bounding_max.x; x++) {
+			Vec2i offset = { x - bounding_min.x, y - bounding_min.y };
 
-			// Edge Equation
-			// 使用整数避免浮点误差，同时因为是左手系，所以符号取反
-			int E01 = -(cx - p0.x) * (p1.y - p0.y) + (cy - p0.y) * (p1.x - p0.x);
-			int E12 = -(cx - p1.x) * (p2.y - p1.y) + (cy - p1.y) * (p2.x - p1.x);
-			int E20 = -(cx - p2.x) * (p0.y - p2.y) + (cy - p2.y) * (p0.x - p2.x);
+			// 判断点(x,y)是否位于三角形内部或者三角形边缘
+			// 当属于上边缘或者左边缘的时候，将e与1进行比较，从而跳过e=0的情况
+			float e01 = edge_equation_01->Evaluate(offset.x, offset.y);
+			if (e01 < (edge_equation_01->is_top_left ? 0 : 1)) continue;
 
+			float e12 = edge_equation_12->Evaluate(offset.x, offset.y);
+			if (e12 < (edge_equation_12->is_top_left ? 0 : 1)) continue;
 
-			// 如果是左上边，用 E >= 0 判断合法，如果右下边就用 E > 0 判断合法
-			// 这里通过引入一个误差 1 ，来将 < 0 和 <= 0 用一个式子表达
-			if (E01 < (TopLeft01 ? 0 : 1)) continue;   // 在第一条边后面
-			if (E12 < (TopLeft12 ? 0 : 1)) continue;   // 在第二条边后面
-			if (E20 < (TopLeft20 ? 0 : 1)) continue;   // 在第三条边后面
+			float e20 = edge_equation_20->Evaluate(offset.x, offset.y);
+			if (e20 < (edge_equation_20->is_top_left ? 0 : 1)) continue;
 
-			// 三个端点到当前点的矢量
-			Vec2f s0 = vtx[0]->spf - px;
-			Vec2f s1 = vtx[1]->spf - px;
-			Vec2f s2 = vtx[2]->spf - px;
+			// 计算重心坐标barycentric coordinates
+			float bc_p1 = e20 * edge_equation_20->w_reciprocal * bc_denominator;
+			float bc_p2 = e01 * edge_equation_01->w_reciprocal * bc_denominator;
+			float bc_p0 = 1 - bc_p1 - bc_p2;
 
-			// 重心坐标系：计算内部子三角形面积 a / b / c
-			float a = Abs(vector_cross(s1, s2));    // 子三角形 Px-P1-P2 面积
-			float b = Abs(vector_cross(s2, s0));    // 子三角形 Px-P2-P0 面积
-			float c = Abs(vector_cross(s0, s1));    // 子三角形 Px-P0-P1 面积
-			float s = a + b + c;                    // 大三角形 P0-P1-P2 面积
+			// 深度测试，使用反向z-buffer
+			float depth = vertex[0]->position.z * bc_p0 + vertex[1]->position.z * bc_p1 + vertex[2]->position.z * bc_p2;
+			if (1 - depth < depth_buffer_[y][x]) continue;
+			depth_buffer_[y][x] = 1 - depth;
 
-			if (s == 0.0f) continue;
-
-			// 除以总面积，以保证：a + b + c = 1，方便用作插值系数
-			a = a * (1.0f / s);
-			b = b * (1.0f / s);
-			c = c * (1.0f / s);
-
-			// 计算当前点的 1/w，因 1/w 和屏幕空间呈线性关系，故直接重心插值
-			float rhw = vtx[0]->rhw * a + vtx[1]->rhw * b + vtx[2]->rhw * c;
-
-			// 进行深度测试
-			if (rhw < depth_buffer[cy][cx]) continue;
-			depth_buffer[cy][cx] = rhw;   // 记录 1/w 到深度缓存
-
-			// 还原当前像素的 w
-			float w = 1.0f / ((rhw != 0.0f) ? rhw : 1.0f);
-
-			// 计算三个顶点插值 varying 的系数
-			// 先除以各自顶点的 w 然后进行屏幕空间插值然后再乘以当前 w
-			float c0 = vtx[0]->rhw * a * w;
-			float c1 = vtx[1]->rhw * b * w;
-			float c2 = vtx[2]->rhw * c * w;
 
 			// 准备为当前像素的各项 varying 进行插值
-			ShaderContext input;
+			ShaderContext attribute_current_vertex;
 
-			ShaderContext& i0 = vtx[0]->context;
-			ShaderContext& i1 = vtx[1]->context;
-			ShaderContext& i2 = vtx[2]->context;
+			ShaderContext& context_p0 = vertex[0]->context;
+			ShaderContext& context_p1 = vertex[1]->context;
+			ShaderContext& context_p2 = vertex[2]->context;
 
 			// 插值各项 varying
-			for (auto const& it : i0.varying_float) {
-				int key = it.first;
-				float f0 = i0.varying_float[key];
-				float f1 = i1.varying_float[key];
-				float f2 = i2.varying_float[key];
-				input.varying_float[key] = c0 * f0 + c1 * f1 + c2 * f2;
+			for (const auto& key : context_p0.varying_vec2f | std::views::keys) {
+				float f0 = context_p0.varying_float[key];
+				float f1 = context_p1.varying_float[key];
+				float f2 = context_p2.varying_float[key];
+				attribute_current_vertex.varying_float[key] = bc_p0 * f0 + bc_p1 * f1 + bc_p2 * f2;
 			}
 
-			for (auto const& it : i0.varying_vec2f) {
-				int key = it.first;
-				const Vec2f& f0 = i0.varying_vec2f[key];
-				const Vec2f& f1 = i1.varying_vec2f[key];
-				const Vec2f& f2 = i2.varying_vec2f[key];
-				input.varying_vec2f[key] = c0 * f0 + c1 * f1 + c2 * f2;
+			for (const auto& key : context_p0.varying_vec2f | std::views::keys) {
+				const Vec2f& f0 = context_p0.varying_vec2f[key];
+				const Vec2f& f1 = context_p1.varying_vec2f[key];
+				const Vec2f& f2 = context_p2.varying_vec2f[key];
+				attribute_current_vertex.varying_vec2f[key] = bc_p0 * f0 + bc_p1 * f1 + bc_p2 * f2;
 			}
 
-			for (auto const& it : i0.varying_vec3f) {
-				int key = it.first;
-				const Vec3f& f0 = i0.varying_vec3f[key];
-				const Vec3f& f1 = i1.varying_vec3f[key];
-				const Vec3f& f2 = i2.varying_vec3f[key];
-				input.varying_vec3f[key] = c0 * f0 + c1 * f1 + c2 * f2;
+			for (const auto& key : context_p0.varying_vec3f | std::views::keys) {
+				const Vec3f& f0 = context_p0.varying_vec3f[key];
+				const Vec3f& f1 = context_p1.varying_vec3f[key];
+				const Vec3f& f2 = context_p2.varying_vec3f[key];
+				attribute_current_vertex.varying_vec3f[key] = bc_p0 * f0 + bc_p1 * f1 + bc_p2 * f2;
 			}
 
-			for (auto const& it : i0.varying_vec4f) {
-				int key = it.first;
-				const Vec4f& f0 = i0.varying_vec4f[key];
-				const Vec4f& f1 = i1.varying_vec4f[key];
-				const Vec4f& f2 = i2.varying_vec4f[key];
-				input.varying_vec4f[key] = c0 * f0 + c1 * f1 + c2 * f2;
+			for (const auto& key : context_p0.varying_vec4f | std::views::keys) {
+				const Vec4f& f0 = context_p0.varying_vec4f[key];
+				const Vec4f& f1 = context_p1.varying_vec4f[key];
+				const Vec4f& f2 = context_p2.varying_vec4f[key];
+				attribute_current_vertex.varying_vec4f[key] = bc_p0 * f0 + bc_p1 * f1 + bc_p2 * f2;
 			}
 
 			// 执行像素着色器
 			Vec4f color = { 0.0f, 0.0f, 0.0f, 0.0f };
-
-			if (pixel_shader != NULL) {
-				color = pixel_shader(input);
+			if (pixel_shader_ != nullptr) {
+				color = pixel_shader_(attribute_current_vertex);
 			}
-
-			// 绘制到 framebuffer 上，这里可以加判断，如果 PS 返回的颜色 alpha 分量
-			// 小于等于零则放弃绘制，不过这样的话要把前面的更新深度缓存的代码挪下来，
-			// 只有需要渲染的时候才更新深度。
-			SetPixel(cx, cy, color);
+			SetPixel(x, y, color);
 		}
 	}
 
 	// 绘制线框，再画一次避免覆盖
-	if (render_frame) {
-		DrawLine(_vertex[0].spi.x, _vertex[0].spi.y, _vertex[1].spi.x, _vertex[1].spi.y);
-		DrawLine(_vertex[0].spi.x, _vertex[0].spi.y, _vertex[2].spi.x, _vertex[2].spi.y);
-		DrawLine(_vertex[2].spi.x, _vertex[2].spi.y, _vertex[1].spi.x, _vertex[1].spi.y);
+	if (render_frame_) {
+		DrawLine(vertex[0]->screen_position_i.x, vertex[0]->screen_position_i.y, vertex[1]->screen_position_i.x, vertex[1]->screen_position_i.y);
+		DrawLine(vertex[0]->screen_position_i.x, vertex[0]->screen_position_i.y, vertex[2]->screen_position_i.x, vertex[2]->screen_position_i.y);
+		DrawLine(vertex[2]->screen_position_i.x, vertex[2]->screen_position_i.y, vertex[1]->screen_position_i.x, vertex[1]->screen_position_i.y);
 	}
 
 	return true;

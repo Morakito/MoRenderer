@@ -3,26 +3,26 @@
 #include "win32.h"
 
 
-Camera::Camera(Vec3f _position, Vec3f _target, Vec3f _up, float _fov, float _aspect) :
-	position(_position), target(_target), up(_up), fov(_fov), aspect(_aspect)
+Camera::Camera(Vec3f position, Vec3f target, Vec3f up, float fov, float aspect) :
+	position_(position), target_(target), up_(up), fov_(fov), aspect_(aspect)
 {
-	nearPlane = 1.0f;
-	farPlane = 500.0f;
+	near_plane_ = 0.01f;
+	far_plane_ = 5.0f;
 }
 
 Camera::~Camera() {}
 
 
-void Camera::UpdataCameraPose()
+void Camera::UpdateCameraPose()
 {
 	// 观察向量：从相机位置指向目标位置
-	Vec3f view = position - target;
+	Vec3f view = position_ - target_;
 	float radius = vector_length(view);
 
 	float phi = (float)atan2(view[0], view[2]);				// azimuth angle(方位角), angle between from_target and z-axis，[-pi, pi]
 	float theta = (float)acos(view[1] / radius);			// zenith angle(天顶角), angle between from_target and y-axis, [0, pi]
-	float mouseDeltaX = window->mouse_info.mouseDelta[0] / window->width;
-	float mouseDeltaY = window->mouse_info.mouseDelta[1] / window->height;
+	float mouseDeltaX = window->mouse_info.mouse_delta[0] / window->width;
+	float mouseDeltaY = window->mouse_info.mouse_delta[1] / window->height;
 
 	// 鼠标左键
 	if (window->mouseButtons[0])
@@ -39,23 +39,23 @@ void Camera::UpdataCameraPose()
 	{
 		// 鼠标右键
 		float factor = radius * (float)tan(60.0 / 360 * PI) * 2.2;
-		Vec3f right = mouseDeltaX * factor * axisX;
-		Vec3f up = mouseDeltaY * factor * axisY;
+		Vec3f right = mouseDeltaX * factor * axis_r;
+		Vec3f up = mouseDeltaY * factor * axis_u;
 
-		position += (right - up);
-		target += (right - up);
+		position_ += (-right + up);
+		target_ += (-right + up);
 	}
 
 	// 鼠标滚轮
 	if (window->mouseButtons[2])
 	{
-		radius *= (float)pow(0.95, window->mouse_info.mouseWheelDelta);
+		radius *= static_cast<float>(pow(0.95, window->mouse_info.mouse_wheel_delta));
 		window->mouseButtons[2] = 0;
 	}
 
-	position[0] = target[0] + radius * sin(phi) * sin(theta);
-	position[1] = target[1] + radius * cos(theta);
-	position[2] = target[2] + radius * sin(theta) * cos(phi);
+	position_[0] = target_[0] + radius * sin(phi) * sin(theta);
+	position_[1] = target_[1] + radius * cos(theta);
+	position_[2] = target_[2] + radius * sin(theta) * cos(phi);
 }
 
 
@@ -63,13 +63,13 @@ void Camera::HandleInputEvents()
 {
 	/*
 		计算相机坐标系的轴
-		axisX：正方向指向屏幕右侧
-		axisY：正方向指向屏幕上侧
-		axisZ：正方向指向屏幕
+		axis_v：观察向量
+		axis_r：正方向指向屏幕右侧
+		axis_u：正方向指向屏幕上侧
 	*/
-	axisZ = vector_normalize(position - target);
-	axisX = vector_normalize(vector_cross(axisZ, up));
-	axisY = vector_normalize(vector_cross(axisX, axisZ));
+	axis_v = vector_normalize(target_-position_ );
+	axis_r = vector_normalize(vector_cross(axis_v, up_));
+	axis_u = vector_normalize(vector_cross(axis_r, axis_v));
 
 	// 处理输入事件
 	HandleMouseEvents();
@@ -81,46 +81,46 @@ void Camera::HandleMouseEvents()
 
 	if (window->mouseButtons[0] || window->mouseButtons[1] || window->mouseButtons[2])
 	{
-		Vec2f mousePosition = GetMousePosition();
-		window->mouse_info.mouseDelta = window->mouse_info.mousePosition - mousePosition;
-		window->mouse_info.mousePosition = mousePosition;
+		const Vec2f mouse_position = GetMousePosition();
+		window->mouse_info.mouse_delta = window->mouse_info.mouse_position - mouse_position;
+		window->mouse_info.mouse_position = mouse_position;
 
-		UpdataCameraPose();
+		UpdateCameraPose();
 	}
 }
 
 void Camera::HandleKeyEvents()
 {
-	float distance = vector_length(target - position);
+	const float distance = vector_length(target_ - position_);
 
 	if (window->keys['Q'])
 	{
-		float factor = distance / window->width * 200.0f;
-		position += -0.05f * axisZ * factor;
+		const float factor = distance / window->width * 200.0f;
+		position_ += -0.05f * axis_v * factor;
 	}
 	if (window->keys['E'])
 	{
-		position += 0.05f * axisZ;
+		position_ += 0.05f * axis_v;
 	}
 	if (window->keys[VK_UP] || window->keys['W'])
 	{
-		position += 0.05f * axisY;
-		target += 0.05f * axisY;
+		position_ += 0.05f * axis_u;
+		target_ += 0.05f * axis_u;
 	}
 	if (window->keys[VK_DOWN] || window->keys['S'])
 	{
-		position += -0.05f * axisY;
-		target += -0.05f * axisY;
+		position_ += -0.05f * axis_u;
+		target_ += -0.05f * axis_u;
 	}
 	if (window->keys[VK_LEFT] || window->keys['A'])
 	{
-		position += -0.05f * axisX;
-		target += -0.05f * axisX;
+		position_ += -0.05f * axis_r;
+		target_ += -0.05f * axis_r;
 	}
 	if (window->keys[VK_RIGHT] || window->keys['D'])
 	{
-		position += 0.05f * axisX;
-		target += 0.05f * axisX;
+		position_ += 0.05f * axis_r;
+		target_ += 0.05f * axis_r;
 	}
 	if (window->keys[VK_ESCAPE])
 	{
@@ -128,13 +128,13 @@ void Camera::HandleKeyEvents()
 	}
 }
 
-void Camera::UpdateUniformBuffer(UniformBuffer* uniformbuffer)
+void Camera::UpdateUniformBuffer(UniformBuffer* uniform_buffer)
 {
-	uniformbuffer->modelMatrix = matrix_set_scale(1, 1, 1);
-	uniformbuffer->viewMatrix = matrix_set_lookat(position, target, up);
-	uniformbuffer->projMatrix = matrix_set_perspective(fov, aspect, nearPlane, farPlane);;
+	uniform_buffer->model_matrix = matrix_set_scale(1, 1, 1);
+	uniform_buffer->view_matrix = matrix_look_at(position_, target_, up_);
+	uniform_buffer->proj_matrix = matrix_set_perspective(fov_, aspect_, near_plane_, far_plane_);;
 
-	uniformbuffer->CalculateRestMatrix();
+	uniform_buffer->CalculateRestMatrix();
 }
 
 

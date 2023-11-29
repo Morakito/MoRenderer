@@ -7,9 +7,9 @@
 
 typedef struct mouse
 {
-	Vec2f mousePosition;			// 鼠标当前位置
-	Vec2f mouseDelta;				// 鼠标当前位置的变化量
-	float mouseWheelDelta;			// 鼠标滚轮的变化量
+	Vec2f mouse_position;			// 鼠标当前位置
+	Vec2f mouse_delta;				// 鼠标当前位置的变化量
+	float mouse_wheel_delta;			// 鼠标滚轮的变化量
 }mouse_t;
 
 typedef struct window

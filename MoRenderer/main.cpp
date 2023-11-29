@@ -9,81 +9,82 @@
 
 int main() {
 
-	const int width = 600;
-	const int height = 800;
+	constexpr int width = 600;
+	constexpr int height = 800;
 
 	window_init(width, height, "MoRenderer");
 
 	int num_frames = 0;
 	float print_time = platform_get_time();
-	std::string logMessage;
+	std::string log_message;
 
 
-	MoRenderer* rh = new MoRenderer(width, height);
-
+	auto rh = new MoRenderer(width, height);
+	rh->SetRenderState(false, true);
 	// 加载模型
-	const std::string modelName = "C:/WorkSpace/MoRenderer/models/diablo3_pose.obj";
-	Model* model = new Model(modelName);
+	const std::string model_name = "C:/WorkSpace/MoRenderer/models/diablo3_pose.obj";
+	auto model = new Model(model_name);
 
 	// 加载贴图
-	Texture* diffuse = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_diffuse.bmp");
-	Texture* normal = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_nm.bmp");
-	Texture* specular = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_spec.bmp");
+	auto* diffuse_map = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_diffuse.bmp");
+	auto* normal_map = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_nm.bmp");
+	auto specular_map = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_spec.bmp");
 
 	// 设置相机和光源
+	Vec3f camera_position = { 0, 0, 2 };					// 相机位置
+	Vec3f camera_target = { 0, 0, 0 };					// 相机看向的位置
+	Vec3f camera_up = { 0, 1, 0 };						// 相机向上的位置
+	Vec3f light_direction = { 0, -0.5f, -2 };				// 光照方向
+	float fov = 90.0f;
 
-	Vec3f cameraPosition = { 0, -0.5, 1.7 };			// 相机位置
-	Vec3f cameraTarget = { 0, 0, 0 };					// 相机看向的位置
-	Vec3f cameraUp = { 0, 1, 0 };						// 相机向上的位置
-	Vec3f light_dir = { 1, 1, 0.85 };					// 光照方向
-	float fov = 3.1415926f * 0.5f;
 
-
-	Camera* camera = new Camera(cameraPosition, cameraTarget, cameraUp, fov, (float)(width) / height);
-	UniformBuffer uniformBuffer{};
-	uniformBuffer.modelMatrix = matrix_set_scale(1, 1, 1);
-	uniformBuffer.viewMatrix = matrix_set_lookat(cameraPosition, cameraTarget, cameraUp);
-	uniformBuffer.projMatrix = matrix_set_perspective(fov, camera->aspect, camera->nearPlane, camera->nearPlane);
-	uniformBuffer.CalculateRestMatrix();
+	auto* camera = new Camera(camera_position, camera_target, camera_up, fov, static_cast<float>(width) / height);
+	UniformBuffer uniform_buffer{};
+	uniform_buffer.model_matrix = matrix_set_scale(1, 1, 1);
+	uniform_buffer.view_matrix = matrix_look_at(camera_position, camera_target, camera_up);
+	uniform_buffer.proj_matrix = matrix_set_perspective(fov, camera->aspect_, camera->near_plane_, camera->near_plane_);
+	uniform_buffer.CalculateRestMatrix();
 
 	// 顶点属性
 	Vertex vs_input[3];
-	enum VARYING_ATTRIBUTES
+	enum VaryingAttributes
 	{
 		VARYING_TEXCOORD = 0,		// 纹理坐标
-		VARYING_POSITIONWS = 1		// 世界坐标
+		VARYING_POSITION_WS = 1		// 世界坐标
 	};
 
 	// 顶点着色器
-	rh->SetVertexShader([&](int index, ShaderContext& output) -> Vec4f {
-		Vec4f vertex = vs_input[index].positionOS.xyz1() * uniformBuffer.mvpMatrix;
+	rh->SetVertexShader([&](const int index, ShaderContext& output) -> Vec4f {
+		Vec4f vertex = uniform_buffer.mvp_matrix * vs_input[index].positionOS.xyz1();
 		// 将顶点位置从模型空间转换为世界坐标系
-		Vec3f positionWS = (vs_input[index].positionOS.xyz1() * uniformBuffer.modelMatrix).xyz();
-		output.varying_vec3f[VARYING_POSITIONWS] = positionWS;
+		const Vec3f position_ws = (uniform_buffer.model_matrix * vs_input[index].positionOS.xyz1()).xyz();
+
+		output.varying_vec3f[VARYING_POSITION_WS] = position_ws;
 		output.varying_vec2f[VARYING_TEXCOORD] = vs_input[index].texcoord;
 		return vertex;
 		});
 
 
-	// 像素着色器：使用Blinn-Phong光照模型
+	// 像素着色器：使用Blinn Phong光照模型
 	rh->SetPixelShader([&](ShaderContext& input) -> Vec4f {
 		Vec2f uv = input.varying_vec2f[VARYING_TEXCOORD];
 
-		Vec3f worldNormal = (normal->Sample2D(uv) * uniformBuffer.normalMatrix).xyz();
-		Vec3f worldPosition = input.varying_vec3f[VARYING_TEXCOORD];
+		Vec3f world_normal = (normal_map->Sample2D(uv) * uniform_buffer.normal_matrix).xyz();
+		Vec3f world_position = input.varying_vec3f[VARYING_TEXCOORD];
 
-		Vec3f lightDir = vector_normalize(light_dir);
-		Vec3f viewDir = vector_normalize(cameraPosition - worldPosition);
+		Vec3f light_dir = vector_normalize(-light_direction);
+		Vec3f view_dir = vector_normalize(camera->position_ - world_position);
 
 		//漫反射
-		Vec4f baseColor = diffuse->Sample2D(uv);
-		Vec4f diffuse = baseColor * Saturate(vector_dot(lightDir, worldNormal));
+		Vec4f base_color = diffuse_map->Sample2D(uv);
+		Vec4f diffuse = base_color * Saturate(vector_dot(light_dir, world_normal));
 
 		//高光
-		float _Specluar = specular->Sample2D(uv).b * 5;
-		Vec3f halfDir = vector_normalize(viewDir + lightDir);
-		float intensity = pow(Saturate(vector_dot(worldNormal, halfDir)), 20);
-		Vec4f specular = baseColor * intensity * _Specluar;
+		//float _Specluar = specular->Sample2D(uv).b * 5;
+		float _Specluar = 1.0f;
+		Vec3f half_dir = vector_normalize(view_dir + light_dir);
+		float intensity = pow(Saturate(vector_dot(world_normal, half_dir)), 20);
+		Vec4f specular = base_color * intensity * _Specluar;
 
 		Vec4f color = diffuse + specular;
 		return color;
@@ -91,10 +92,10 @@ int main() {
 
 	while (!window->is_close)
 	{
-		float curr_time = platform_get_time();
+		float current_time = platform_get_time();
 
 		camera->HandleInputEvents();
-		camera->UpdateUniformBuffer(&uniformBuffer);
+		camera->UpdateUniformBuffer(&uniform_buffer);
 
 		// 渲染模型
 		rh->ClearFrameBuffer();
@@ -112,12 +113,12 @@ int main() {
 		}
 
 		// 输出图像
-		unsigned char* image_data = new uint8_t[width * height * 4];
+		uint8_t* image_data = new uint8_t[width * height * 4];
 		for (int y = 0; y < height; y++)
 		{
 			for (int x = 0; x < width; x++)
 			{
-				ColorRGBA_32bit color = vector_to_32bit_color(rh->color_buffer[y][x]);
+				ColorRGBA_32bit color = vector_to_32bit_color(rh->color_buffer_[y][x]);
 
 				//32 bit位图存储顺序，从低到高依次为BGRA
 				image_data[4 * (y * width + x)] = color.b;
@@ -129,17 +130,17 @@ int main() {
 
 		// 计算并显示FPS
 		num_frames += 1;
-		if (curr_time - print_time >= 1) {
-			int sum_millis = (int)((curr_time - print_time) * 1000);
+		if (current_time - print_time >= 1) {
+			int sum_millis = (int)((current_time - print_time) * 1000);
 			int avg_millis = sum_millis / num_frames;
 
-			logMessage = "FPS: " + std::to_string(num_frames) + " / " + std::to_string(avg_millis) + " ms";
+			log_message = "FPS: " + std::to_string(num_frames) + " / " + std::to_string(avg_millis) + " ms";
 
 			num_frames = 0;
-			print_time = curr_time;
+			print_time = current_time;
 		}
 
-		window_draw(image_data, logMessage);
+		window_draw(image_data, log_message);
 		msg_dispatch();
 	}
 

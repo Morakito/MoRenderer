@@ -3,7 +3,7 @@
 #include <cassert>
 #include <cstdio>
 
-window_t* window = NULL;
+window_t* window = nullptr;
 
 static LRESULT CALLBACK msg_callback(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -19,14 +19,14 @@ static LRESULT CALLBACK msg_callback(HWND hWnd, UINT msg, WPARAM wParam, LPARAM 
 		window->keys[wParam & 511] = 0;
 		break;
 	case WM_LBUTTONDOWN:
-		window->mouse_info.mousePosition = GetMousePosition();
+		window->mouse_info.mouse_position = GetMousePosition();
 		window->mouseButtons[0] = 1;
 		break;
 	case WM_LBUTTONUP:
 		window->mouseButtons[0] = 0;
 		break;
 	case WM_RBUTTONDOWN:
-		window->mouse_info.mousePosition = GetMousePosition();
+		window->mouse_info.mouse_position = GetMousePosition();
 		window->mouseButtons[1] = 1;
 		break;
 	case WM_RBUTTONUP:
@@ -34,7 +34,7 @@ static LRESULT CALLBACK msg_callback(HWND hWnd, UINT msg, WPARAM wParam, LPARAM 
 		break;
 	case WM_MOUSEWHEEL:
 		window->mouseButtons[2] = 1;
-		window->mouse_info.mouseWheelDelta = GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+		window->mouse_info.mouse_wheel_delta = GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
 		break;
 
 	default: return DefWindowProc(hWnd, msg, wParam, lParam);
@@ -92,7 +92,7 @@ static void init_bm_header(BITMAPINFOHEADER& bitmap, int width, int height)
 	memset(&bitmap, 0, sizeof(BITMAPINFOHEADER));
 	bitmap.biSize = sizeof(BITMAPINFOHEADER);		//本结构所占用的字节数
 	bitmap.biWidth = width;							//bitmap宽度
-	bitmap.biHeight = -height;						//bitmap高度
+	bitmap.biHeight = height;						//bitmap高度，原点位于左下角
 	bitmap.biPlanes = 1;							//目标设备级别
 	bitmap.biBitCount = 32;							//bitmap中一个颜色所占据的bit数
 	bitmap.biCompression = BI_RGB;					//是否压缩，BI_RGB为不压缩

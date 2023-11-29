@@ -6,12 +6,12 @@
 Model::Model(const std::string fileName)
 {
 	{
-		tinyobj::attrib_t attrib;
+		tinyobj::attrib_t attributes;
 		std::vector<tinyobj::shape_t> shapes;
 		std::vector<tinyobj::material_t> materials;
 		std::string warn, err;
 
-		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, fileName.c_str())) {
+		if (!tinyobj::LoadObj(&attributes, &shapes, &materials, &warn, &err, fileName.c_str())) {
 			throw std::runtime_error(warn + err);
 		}
 
@@ -23,18 +23,18 @@ Model::Model(const std::string fileName)
 					Vertex vertex{};
 					auto& index = shape.mesh.indices[face_id + i];
 					vertex.positionOS = {
-						attrib.vertices[3 * index.vertex_index + 0],
-						attrib.vertices[3 * index.vertex_index + 1],
-						attrib.vertices[3 * index.vertex_index + 2]
+						attributes.vertices[3 * index.vertex_index + 0],
+						attributes.vertices[3 * index.vertex_index + 1],
+						attributes.vertices[3 * index.vertex_index + 2]
 					};
 					vertex.texcoord = {
-						attrib.texcoords[2 * index.texcoord_index + 0],
-						1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+						attributes.texcoords[2 * index.texcoord_index + 0],
+						1.0f - attributes.texcoords[2 * index.texcoord_index + 1]
 					};
 					vertex.normal = {
-						attrib.normals[3 * index.normal_index + 0],
-						attrib.normals[3 * index.normal_index + 1],
-						attrib.normals[3 * index.normal_index + 2],
+						attributes.normals[3 * index.normal_index + 0],
+						attributes.normals[3 * index.normal_index + 1],
+						attributes.normals[3 * index.normal_index + 2],
 					};
 					vertices.push_back(vertex);
 				}
