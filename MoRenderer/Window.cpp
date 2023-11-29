@@ -181,7 +181,7 @@ void Window::MessageDispatch()
 	}
 }
 
-void Window::WindowDisplay(const uint8_t* frame_buffer, const std::string& log_message)
+void Window::WindowDisplay(const uint8_t* frame_buffer, const std::string& log_message) const
 {
 	memcpy(frame_buffer_, frame_buffer, width_ * height_ * 4);
 

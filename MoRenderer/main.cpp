@@ -112,22 +112,6 @@ int main() {
 			rh->DrawTriangle();
 		}
 
-		// 输出图像
-		uint8_t* image_data = new uint8_t[width * height * 4];
-		for (int y = 0; y < height; y++)
-		{
-			for (int x = 0; x < width; x++)
-			{
-				ColorRGBA_32bit color = vector_to_32bit_color(rh->color_buffer_[y][x]);
-
-				//32 bit位图存储顺序，从低到高依次为BGRA
-				image_data[4 * (y * width + x)] = color.b;
-				image_data[4 * (y * width + x) + 1] = color.g;
-				image_data[4 * (y * width + x) + 2] = color.r;
-				image_data[4 * (y * width + x) + 3] = color.a;
-			}
-		}
-
 		// 计算并显示FPS
 		num_frames += 1;
 		if (current_time - print_time >= 1) {
@@ -140,7 +124,8 @@ int main() {
 			print_time = current_time;
 		}
 
-		window->WindowDisplay(image_data, log_message);
+		// 显示图像
+		window->WindowDisplay(rh->color_buffer_, log_message);
 		window->MessageDispatch();
 	}
 

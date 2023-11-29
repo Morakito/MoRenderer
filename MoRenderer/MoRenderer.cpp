@@ -10,10 +10,6 @@ void MoRenderer::CleanUp()
 
 	// 清空frame buffer
 	if (color_buffer_) {
-		for (int j = 0; j < frame_buffer_height_; j++) {
-			if (color_buffer_[j]) delete[]color_buffer_[j];
-			color_buffer_[j] = nullptr;
-		}
 		delete[]color_buffer_;
 		color_buffer_ = nullptr;
 	}
@@ -38,10 +34,7 @@ void MoRenderer::Init(const int width, const int height)
 	color_foreground_ = Vec4f(0.0f);
 	color_background_ = Vec4f(0.5f, 1.0f, 1.0f, 1.0f);
 
-	color_buffer_ = new Vec4f * [height];
-	for (int j = 0; j < height; j++) {
-		color_buffer_[j] = new Vec4f[width];
-	}
+	color_buffer_ = new uint8_t[height * width * 4];
 
 	depth_buffer_ = new float* [height];
 	for (int j = 0; j < height; j++) {
@@ -53,18 +46,40 @@ void MoRenderer::Init(const int width, const int height)
 
 void MoRenderer::ClearFrameBuffer() const
 {
+	const ColorRGBA_32bit color_32_bit = vector_to_32bit_color(color_background_);
 	if (color_buffer_) {
 		for (int j = 0; j < frame_buffer_height_; j++) {
+			const int offset = frame_buffer_width_ * (4 * j);
+
 			for (int i = 0; i < frame_buffer_width_; i++)
-				color_buffer_[j][i] = color_background_;
+			{
+				const int base_address = offset + 4 * i;
+				//32 bit位图存储顺序，从低到高依次为BGRA
+				color_buffer_[base_address] = color_32_bit.b;
+				color_buffer_[base_address + 1] = color_32_bit.g;
+				color_buffer_[base_address + 2] = color_32_bit.r;
+				color_buffer_[base_address + 3] = color_32_bit.a;
+			}
 		}
 	}
+
 	if (depth_buffer_) {
 		for (int j = 0; j < frame_buffer_height_; j++) {
 			for (int i = 0; i < frame_buffer_width_; i++)
 				depth_buffer_[j][i] = 0.0f;
 		}
 	}
+}
+
+void MoRenderer::SetBuffer(uint8_t* buffer, const int x, const int y, const Vec4f& color) const
+{
+	const ColorRGBA_32bit color_32_bit = vector_to_32bit_color(color);
+	const int base_address = frame_buffer_width_ * (4 * y) + 4 * x;
+	//32 bit位图存储顺序，从低到高依次为BGRA
+	buffer[base_address] = color_32_bit.b;
+	buffer[base_address + 1] = color_32_bit.g;
+	buffer[base_address + 2] = color_32_bit.r;
+	buffer[base_address + 3] = color_32_bit.a;
 }
 
 void MoRenderer::DrawLine(int x1, int y1, int x2, int y2, const Vec4f& color) const

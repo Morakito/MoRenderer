@@ -25,7 +25,7 @@ public:
 public:
 	void WindowInit(int width, int height, const char* title);
 	void WindowDestroy();
-	void WindowDisplay(const uint8_t* frame_buffer, const std::string& log_message) ;
+	void WindowDisplay(const uint8_t* frame_buffer, const std::string& log_message) const;
 
 	Vec2f GetMousePosition() const;
 

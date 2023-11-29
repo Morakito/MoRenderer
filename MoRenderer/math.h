@@ -58,6 +58,14 @@ template<typename T> inline T Saturate(T x) {
 // 3D  ˝—ß‘ÀÀ„
 //---------------------------------------------------------------------
 
+inline static uint32_t vector_to_color(const Vec4f& color) {
+	const auto r = static_cast<uint32_t>(Between(0, 255, static_cast<int>(color.r * 255.0f)));
+	const auto g = static_cast<uint32_t>(Between(0, 255, static_cast<int>(color.g * 255.0f)));
+	const auto b = static_cast<uint32_t>(Between(0, 255, static_cast<int>(color.b * 255.0f)));
+	const auto a = static_cast<uint32_t>(Between(0, 255, static_cast<int>(color.a * 255.0f)));
+	return (r << 16) | (g << 8) | b | (a << 24);
+}
+
 inline static ColorRGBA_32bit vector_to_32bit_color(const Vec4f& color) {
 	const auto r = static_cast<uint8_t>(Between(0, 255, static_cast<int>(color.r * 255.0f)));
 	const auto g = static_cast<uint8_t>(Between(0, 255, static_cast<int>(color.g * 255.0f)));
@@ -137,11 +145,11 @@ inline static Mat4x4f matrix_set_rotate(float x, float y, float z, float theta) 
  *	v = t - c
  *	r = v x u'
  *	u = r x v
- *	
+ *
  *  r.x		r.y		r.z		-t°§r
  *	u_x		u.y		u.z		-t°§u
  *	-v.y	-v.y	-v.z	-t°§v
- *  0		0		0		1 
+ *  0		0		0		1
  */
 inline static Mat4x4f matrix_look_at(const Vec3f& camera_position, const Vec3f& target, const Vec3f& up) {
 	const Vec3f axis_v = vector_normalize(target - camera_position);

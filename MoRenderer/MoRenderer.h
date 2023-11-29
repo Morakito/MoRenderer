@@ -76,9 +76,8 @@ public:
 		buffer[x][y] = color;
 	}
 
-	static  void SetBuffer(Vec4f** buffer, const  int x, const  int  y, const  Vec4f& color) {
-		buffer[y][x] = color;
-	}
+	void SetBuffer(uint8_t* buffer, const int x, const  int  y, const  Vec4f& color) const;
+
 
 public:
 
@@ -147,7 +146,7 @@ protected:
 	};
 
 public:
-	Vec4f** color_buffer_;    // 颜色缓存
+	uint8_t* color_buffer_;    // 颜色缓存
 	float** depth_buffer_;    // 深度缓存
 
 	int frame_buffer_width_;            // frame buffer 宽度
