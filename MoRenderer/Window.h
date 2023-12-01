@@ -15,8 +15,8 @@ struct Mouse
 class Window
 {
 public:
-	Window() {}
-	~Window() {};
+	Window() = default;
+	~Window() = default;
 	Window(const Window& window) = delete;
 	Window& operator=(const Window& window) = delete;
 
@@ -30,7 +30,6 @@ public:
 	Vec2f GetMousePosition() const;
 
 public:
-
 	static void RegisterWindowClass(const char* title);
 	static float GetNativeTime();
 	static float PlatformGetTime();
@@ -42,7 +41,7 @@ public:
 	HDC memory_dc_;
 	HBITMAP bitmap_old_;
 	HBITMAP bitmap_dib_;
-	uint8_t* frame_buffer_;		// 输出内容
+	uint8_t* frame_buffer_;				// 输出内容
 	int width_;							// 窗口宽度
 	int height_;						// 窗口高度
 

@@ -8,9 +8,6 @@
 #include "Texture.h"
 #include "Camera.h"
 
-
-
-
 int main() {
 
 	constexpr int width = 600;
@@ -20,7 +17,7 @@ int main() {
 	window->WindowInit(width, height, "MoRenderer");
 
 	int num_frames = 0;
-	float print_time = window->PlatformGetTime();
+	float print_time = Window::PlatformGetTime();
 	std::map<std::string, std::string> log_messages;
 	log_messages["fps_message"] = " ";
 	log_messages["model_message"] = " ";
@@ -30,12 +27,10 @@ int main() {
 	// 加载模型
 	const std::string model_name = "C:/WorkSpace/MoRenderer/models/diablo3_pose.obj";
 	const auto model = new Model(model_name);
-
-
-	// 加载贴图
 	auto* diffuse_map = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_diffuse.bmp");
 	auto* normal_map = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_nm.bmp");
 	auto* specular_map = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_spec.bmp");
+
 
 	std::string model_message = "vertex count: " + std::to_string(model->vertex_number_) + "  face count: " + std::to_string(model->face_number_) + "\n";
 	log_messages["model_message"] = model_message;
@@ -101,7 +96,7 @@ int main() {
 
 	while (!window->is_close_)
 	{
-		float current_time = window->PlatformGetTime();
+		float current_time = Window::PlatformGetTime();
 
 		camera->HandleInputEvents();
 		camera->UpdateUniformBuffer(&uniform_buffer);
@@ -126,11 +121,11 @@ int main() {
 		// 计算并显示FPS
 		num_frames += 1;
 		if (current_time - print_time >= 1) {
-			int sum_millis = (int)((current_time - print_time) * 1000);
+			int sum_millis = static_cast<int>((current_time - print_time) * 1000);
 			int avg_millis = sum_millis / num_frames;
 
 			std::string fps_message = "FPS: " + std::to_string(num_frames) + " / " + std::to_string(avg_millis) + " ms";
-			
+
 			log_messages["fps_message"] = fps_message;
 			num_frames = 0;
 			print_time = current_time;
@@ -138,7 +133,7 @@ int main() {
 
 		// 显示图像
 		window->WindowDisplay(mo_renderer->color_buffer_, log_messages);
-		window->MessageDispatch();
+		Window::MessageDispatch();
 
 	}
 

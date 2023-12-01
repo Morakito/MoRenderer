@@ -46,7 +46,7 @@ void MoRenderer::Init(const int width, const int height)
 
 void MoRenderer::ClearFrameBuffer() const
 {
-	const ColorRGBA_32bit color_32_bit = vector_to_32bit_color(color_background_);
+	const ColorRGBA32Bit color_32_bit = vector_to_32bit_color(color_background_);
 	if (color_buffer_) {
 		for (int j = 0; j < frame_buffer_height_; j++) {
 			const int offset = frame_buffer_width_ * (4 * j);
@@ -73,7 +73,7 @@ void MoRenderer::ClearFrameBuffer() const
 
 void MoRenderer::SetBuffer(uint8_t* buffer, const int x, const int y, const Vec4f& color) const
 {
-	const ColorRGBA_32bit color_32_bit = vector_to_32bit_color(color);
+	const ColorRGBA32Bit color_32_bit = vector_to_32bit_color(color);
 	const int base_address = frame_buffer_width_ * (4 * y) + 4 * x;
 	//32 bit位图存储顺序，从低到高依次为BGRA
 	buffer[base_address] = color_32_bit.b;

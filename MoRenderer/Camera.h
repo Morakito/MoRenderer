@@ -9,14 +9,14 @@
 class Camera
 {
 public:
-	Camera(Vec3f position, const Vec3f& target, Vec3f up, float fov, float aspect);
+	Camera(const Vec3f& position, const Vec3f& target, const Vec3f& up, float fov, float aspect);
 	~Camera();
 
 	// 处理输入事件
 	void HandleInputEvents();
 
 	// 更新uniform buffer中的矩阵
-	void UpdateUniformBuffer(UniformBuffer* uniform_buffer);
+	void UpdateUniformBuffer(UniformBuffer* uniform_buffer) const;
 
 private:
 	// 更新相机姿态
@@ -37,7 +37,7 @@ public:
 		axis_u：正方向指向屏幕上侧
 		axis_v：正方向指向屏幕
 	*/
-	Vec3f axis_r, axis_u, axis_v;
+	Vec3f axis_r_, axis_u_, axis_v_;
 
 	float fov_;						// 相机FOV
 	float aspect_;					// 长宽比

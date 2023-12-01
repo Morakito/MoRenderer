@@ -4,11 +4,8 @@
 #include "matrix.h"
 #include  <cmath>
 
-#define PI 3.1415926
-#define MAX_MODEL_NUM 10
-#define MAX_VERTEX 10
-#define EPSILON 1e-5f
-#define EPSILON2 1e-5f
+constexpr float kPi = 3.1415926f;
+constexpr float kEpsilon = 1e-5f;
 
 // 类型别名
 typedef Vector<2, float>  Vec2f;
@@ -21,7 +18,7 @@ typedef Vector<4, float>  Vec4f, ColorRGBA;
 typedef Vector<4, double> Vec4d;
 typedef Vector<4, int>    Vec4i;
 
-typedef Vector<4, uint8_t>    ColorRGBA_32bit;
+typedef Vector<4, uint8_t>    ColorRGBA32Bit;
 
 // 使用ColorRGBA完成颜色计算使用ColorRGBA_32bit完成图像输出
 
@@ -42,8 +39,8 @@ template<typename T> inline bool NearEqual(T x, T y, T error) {
 	return (Abs(x - y) < error);
 }
 
-template<typename T> inline T Between(T xmin, T xmax, T x) {
-	return Min(Max(xmin, x), xmax);
+template<typename T> inline T Between(T min_x, T max_x, T x) {
+	return Min(Max(min_x, x), max_x);
 }
 
 // 截取 [0, 1] 的范围
@@ -66,7 +63,7 @@ inline static uint32_t vector_to_color(const Vec4f& color) {
 	return (r << 16) | (g << 8) | b | (a << 24);
 }
 
-inline static ColorRGBA_32bit vector_to_32bit_color(const Vec4f& color) {
+inline static ColorRGBA32Bit vector_to_32bit_color(const Vec4f& color) {
 	const auto r = static_cast<uint8_t>(Between(0, 255, static_cast<int>(color.r * 255.0f)));
 	const auto g = static_cast<uint8_t>(Between(0, 255, static_cast<int>(color.g * 255.0f)));
 	const auto b = static_cast<uint8_t>(Between(0, 255, static_cast<int>(color.b * 255.0f)));
@@ -183,7 +180,7 @@ inline static Mat4x4f matrix_set_perspective(float fov, const float aspect, floa
 
 	Mat4x4f m = matrix_set_zero();
 
-	fov = fov / 180.0f * PI;
+	fov = fov / 180.0f * kPi;
 	const float reciprocal_tan_half_fov = 1.0f / (float)tan(fov * 0.5f);
 
 	m.m[0][0] = reciprocal_tan_half_fov / aspect;

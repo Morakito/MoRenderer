@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstdio>
+#include <ranges>
 
 Window* Window::window_ = nullptr;
 
@@ -27,7 +28,6 @@ void Window::WindowInit(const int width, const int height, const char* title)
 	hwnd_ = CreateWindow(title, title,
 		WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
 		0, 0, 0, 0, NULL, NULL, GetModuleHandle(NULL), NULL);
-	assert(window->hwnd_ != NULL);
 
 	//初始化位图头格式
 	InitBitmapHeader(bitmap_info_header, width, height);
@@ -40,7 +40,6 @@ void Window::WindowInit(const int width, const int height, const char* title)
 	//创建位图
 	bitmap_dib_ = CreateDIBSection(memory_dc_, reinterpret_cast<BITMAPINFO*>(&bitmap_info_header),
 		DIB_RGB_COLORS, &frame_buffer_ptr, nullptr, 0); //创建设备无关句柄
-	assert(window->bm_dib != NULL);
 
 	bitmap_old_ = static_cast<HBITMAP>(SelectObject(memory_dc_, bitmap_dib_));//把新创建的位图句柄写入memory_dc_
 	frame_buffer_ = static_cast<unsigned char*>(frame_buffer_ptr);
@@ -200,11 +199,11 @@ void Window::WindowDisplay(const uint8_t* frame_buffer, const std::map<std::stri
 		SetBkColor(memory_dc_, RGB(80, 80, 80));
 
 		int log_index = 1;
-		for (auto log_message : log_messages)
+		for (auto const value : log_messages | std::views::values)
 		{
 			TextOut(memory_dc_, 20, 20 * (log_index++),
-				log_message.second.c_str(),
-				strlen(log_message.second.c_str()));
+				value.c_str(),
+				strlen(value.c_str()));
 		}
 
 

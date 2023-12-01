@@ -322,10 +322,10 @@ inline Vector<N, T> vector_min(const Vector<N, T>& a, const Vector<N, T>& b) {
 	return c;
 }
 
-// 将向量的值控制在 minx/maxx 范围内
+// 将向量的值控制在 min_x/max_x 范围内
 template<size_t N, typename T>
-inline Vector<N, T> vector_between(const Vector<N, T>& minx, const Vector<N, T>& maxx, const Vector<N, T>& x) {
-	return vector_min(vector_max(minx, x), maxx);
+inline Vector<N, T> vector_between(const Vector<N, T>& min_x, const Vector<N, T>& max_x, const Vector<N, T>& x) {
+	return vector_min(vector_max(min_x, x), max_x);
 }
 
 // 判断向量是否接近
@@ -348,11 +348,11 @@ inline bool vector_near_equal(const Vector<N, double>& a, const Vector<N, double
 
 // 向量值元素范围裁剪
 template<size_t N, typename T>
-inline Vector<N, T> vector_clamp(const Vector<N, T>& a, T minx = 0, T maxx = 1) {
+inline Vector<N, T> vector_clamp(const Vector<N, T>& a, T min_x = 0, T max_x = 1) {
 	Vector<N, T> b;
 	for (size_t i = 0; i < N; i++) {
-		T x = (a[i] < minx) ? minx : a[i];
-		b[i] = (x > maxx) ? maxx : x;
+		T x = (a[i] < min_x) ? min_x : a[i];
+		b[i] = (x > max_x) ? max_x : x;
 	}
 	return b;
 }

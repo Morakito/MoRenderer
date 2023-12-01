@@ -23,8 +23,8 @@ public:
 private:
 
 	ColorRGBA GetPixelColor(int x, int y) const;
-	ColorRGBA SampleBilinear(float x, float y);
-	ColorRGBA BilinearInterpolation(ColorRGBA tl, ColorRGBA tr, ColorRGBA bl, ColorRGBA br, float distx, float disty);
+	ColorRGBA SampleBilinear(float x, float y) const;
+	static ColorRGBA BilinearInterpolation(const ColorRGBA& color00, const ColorRGBA& color01, const ColorRGBA& color10, const ColorRGBA& color11, float t_x, float t_y);
 
 public:
 	int textureWidth, textureHeight, textureChannels;

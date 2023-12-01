@@ -18,21 +18,21 @@ Texture::~Texture()
 	stbi_image_free(textureData);
 }
 
-ColorRGBA Texture::GetPixelColor(int x, int y) const
+ColorRGBA Texture::GetPixelColor(const int x, const int y) const
 {
 	ColorRGBA color(0.0f);
 	if (x >= 0 && x < textureWidth &&
 		y >= 0 && y < textureHeight) {
-		unsigned char* pixelOffset = textureData + (x + y * textureWidth) * textureChannels;
-		color.r = pixelOffset[0] / 255.0f;
-		color.g = pixelOffset[1] / 255.0f;
-		color.b = pixelOffset[2] / 255.0f;
-		color.a = textureChannels > 4 ? pixelOffset[3] / 255.0f : 1.0f;
+		const uint8_t* pixel_offset = textureData + (x + y * textureWidth) * textureChannels;
+		color.r = pixel_offset[0] / 255.0f;
+		color.g = pixel_offset[1] / 255.0f;
+		color.b = pixel_offset[2] / 255.0f;
+		color.a = textureChannels > 4 ? pixel_offset[3] / 255.0f : 1.0f;
 	}
 	return color;
 }
 
-ColorRGBA Texture::SampleBilinear(float x, float y)
+ColorRGBA Texture::SampleBilinear(float x, float y) const
 {
 	int32_t x1 = floor(x);
 	int32_t y1 = floor(y);
@@ -40,22 +40,22 @@ ColorRGBA Texture::SampleBilinear(float x, float y)
 	int32_t x2 = ceil(x);
 	int32_t y2 = ceil(y);
 
-	float tx = x - x1;
-	float ty = y - y1;
+	const float t_x = x - x1;
+	const float t_y = y - y1;
 
-	ColorRGBA c00 = GetPixelColor(x1, y1);
-	ColorRGBA c01 = GetPixelColor(x2, y1);
-	ColorRGBA c10 = GetPixelColor(x1, y2);
-	ColorRGBA c11 = GetPixelColor(x2, y2);
+	const ColorRGBA color00 = GetPixelColor(x1, y1);
+	const ColorRGBA color01 = GetPixelColor(x2, y1);
+	const ColorRGBA color10 = GetPixelColor(x1, y2);
+	const ColorRGBA color11 = GetPixelColor(x2, y2);
 
-	return BilinearInterpolation(c00, c01, c10, c11, tx, ty);
+	return BilinearInterpolation(color00, color01, color10, color11, t_x, t_y);
 }
 
-ColorRGBA Texture::BilinearInterpolation(ColorRGBA c00, ColorRGBA c01, ColorRGBA c10, ColorRGBA c11, float distx, float disty)
+ColorRGBA Texture::BilinearInterpolation(const ColorRGBA& color00, const ColorRGBA& color01, const ColorRGBA& color10, const ColorRGBA& color11, float t_x, float t_y)
 {
-	ColorRGBA c0 = vector_lerp(c00, c01, distx);
-	ColorRGBA c1 = vector_lerp(c10, c11, distx);
-	ColorRGBA color = vector_lerp(c0, c1, disty);
+	const ColorRGBA color0 = vector_lerp(color00, color01, t_x);
+	const ColorRGBA color1 = vector_lerp(color10, color11, t_x);
+	ColorRGBA color = vector_lerp(color0, color1, t_y);
 
 	return color;
 }
