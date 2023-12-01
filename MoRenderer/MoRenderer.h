@@ -8,29 +8,10 @@
 
 #include "math.h"
 #include "model.h"
+#include  "Shader.h"
 //---------------------------------------------------------------------
 // 着色器定义
 //---------------------------------------------------------------------
-
-// 着色器上下文，由 VS 设置，再由渲染器按像素逐点插值后，供 PS 读取
-struct ShaderContext {
-	std::map<int, float> varying_float;    // 浮点数 varying 列表
-	std::map<int, Vec2f> varying_vec2f;    // 二维矢量 varying 列表
-	std::map<int, Vec3f> varying_vec3f;    // 三维矢量 varying 列表
-	std::map<int, Vec4f> varying_vec4f;    // 四维矢量 varying 列表
-};
-
-
-// 顶点着色器：因为是 C++ 编写，无需传递 attribute，传个 0-2 的顶点序号
-// 着色器函数直接在外层根据序号读取相应数据即可，最后需要返回一个坐标 position_
-// 各项 varying 设置到 output 里，由渲染器插值后传递给 PS 
-typedef std::function<Vec4f(int index, ShaderContext& output)> VertexShader;
-
-
-// 像素着色器：输入 ShaderContext，需要返回 Vec4f 类型的颜色
-// 三角形内每个点的 input 具体值会根据前面三个顶点的 output 插值得到
-typedef std::function<Vec4f(ShaderContext& input)> PixelShader;
-
 
 class MoRenderer
 {
@@ -61,6 +42,7 @@ public:
 	// 设置 VS/PS 着色器函数
 	void SetVertexShader(const VertexShader& vs) { vertex_shader_ = vs; }
 	void SetPixelShader(const PixelShader& ps) { pixel_shader_ = ps; }
+
 
 	// 设置背景/前景色
 	void SetBackgroundColor(const Vec4f& color) { color_background_ = color; }
@@ -96,7 +78,8 @@ public:
 	// 绘制一个三角形
 	bool DrawTriangle();
 
-protected:
+
+public:
 	// 顶点结构体
 	struct Vertex {
 		ShaderContext context;			// 上下文

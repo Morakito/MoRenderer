@@ -5,7 +5,7 @@
 #include <vector>
 
 
-struct Vertex {
+struct Attributes {
 	Vec3f position_os;
 	Vec2f texcoord;
 	Vec3f normal;
@@ -16,7 +16,7 @@ public:
 	explicit Model(const std::string file_name);
 
 public:
-	std::vector<Vertex> vertices_;
+	std::vector<Attributes> vertices_;
 
 	int vertex_number_;
 	int face_number_;

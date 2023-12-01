@@ -44,38 +44,22 @@ int main() {
 
 
 	auto* camera = new Camera(camera_position, camera_target, camera_up, fov, static_cast<float>(width) / height);
-	UniformBuffer uniform_buffer{};
-	uniform_buffer.model_matrix = matrix_set_scale(1, 1, 1);
-	uniform_buffer.view_matrix = matrix_look_at(camera_position, camera_target, camera_up);
-	uniform_buffer.proj_matrix = matrix_set_perspective(fov, camera->aspect_, camera->near_plane_, camera->near_plane_);
-	uniform_buffer.CalculateRestMatrix();
 
-	// 顶点属性
-	Vertex vs_input[3];
-	enum VaryingAttributes
-	{
-		VARYING_TEXCOORD = 0,		// 纹理坐标
-		VARYING_POSITION_WS = 1		// 世界坐标
-	};
+	BlinnPhongShader blinn_phong_shader;
+	blinn_phong_shader.uniform_buffer_->model_matrix = matrix_set_scale(1, 1, 1);
+	blinn_phong_shader.uniform_buffer_->view_matrix = matrix_look_at(camera_position, camera_target, camera_up);
+	blinn_phong_shader.uniform_buffer_->proj_matrix = matrix_set_perspective(fov, camera->aspect_, camera->near_plane_, camera->near_plane_);
+	blinn_phong_shader.uniform_buffer_->CalculateRestMatrix();
 
-	// 顶点着色器
-	mo_renderer->SetVertexShader([&](const int index, ShaderContext& output) -> Vec4f {
-		Vec4f vertex = uniform_buffer.mvp_matrix * vs_input[index].position_os.xyz1();
-		// 将顶点位置从模型空间转换为世界坐标系
-		const Vec3f position_ws = (uniform_buffer.model_matrix * vs_input[index].position_os.xyz1()).xyz();
 
-		output.varying_vec3f[VARYING_POSITION_WS] = position_ws;
-		output.varying_vec2f[VARYING_TEXCOORD] = vs_input[index].texcoord;
-		return vertex;
-		});
-
+	mo_renderer->SetVertexShader(blinn_phong_shader.vertex_shader_);
 
 	// 像素着色器：使用Blinn Phong光照模型
 	mo_renderer->SetPixelShader([&](ShaderContext& input) -> Vec4f {
-		Vec2f uv = input.varying_vec2f[VARYING_TEXCOORD];
+		Vec2f uv = input.varying_vec2f[BlinnPhongShader::VARYING_TEXCOORD];
 
-		Vec3f world_normal = (normal_map->Sample2D(uv) * uniform_buffer.normal_matrix).xyz();
-		Vec3f world_position = input.varying_vec3f[VARYING_TEXCOORD];
+		Vec3f world_normal = (normal_map->Sample2D(uv) * blinn_phong_shader.uniform_buffer_->normal_matrix).xyz();
+		Vec3f world_position = input.varying_vec3f[BlinnPhongShader::VARYING_TEXCOORD];
 
 		Vec3f light_dir = vector_normalize(-light_direction);
 		Vec3f view_dir = vector_normalize(camera->position_ - world_position);
@@ -99,7 +83,7 @@ int main() {
 		float current_time = Window::PlatformGetTime();
 
 		camera->HandleInputEvents();
-		camera->UpdateUniformBuffer(&uniform_buffer);
+		camera->UpdateUniformBuffer(blinn_phong_shader.uniform_buffer_);
 
 		// 渲染模型
 		mo_renderer->ClearFrameBuffer();
@@ -107,9 +91,9 @@ int main() {
 		{
 			// 设置三个顶点的输入，供 VS 读取
 			for (int j = 0; j < 3; j++) {
-				vs_input[j].position_os = model->vertices_[i + j].position_os;
-				vs_input[j].texcoord = model->vertices_[i + j].texcoord;
-				vs_input[j].normal = model->vertices_[i + j].normal;
+				blinn_phong_shader.vs_input_[j].position_os = model->vertices_[i + j].position_os;
+				blinn_phong_shader.vs_input_[j].texcoord = model->vertices_[i + j].texcoord;
+				blinn_phong_shader.vs_input_[j].normal = model->vertices_[i + j].normal;
 			}
 
 			// 绘制三角形

@@ -2,7 +2,14 @@
 # 项目特定的逻辑。
 
 # 将源代码添加到此项目的可执行文件。
-add_executable (MoRenderer  "MoRenderer.cpp" "MoRenderer.h" "vector.h"  "matrix.h" "math.h"  "Window.h" "Window.cpp" "Texture.h"   "main.cpp" "Model.h" "Model.cpp" "Texture.cpp" "Camera.h" "Camera.cpp" "Shader.h")
+add_executable (MoRenderer  "MoRenderer.cpp" "MoRenderer.h" 
+"vector.h"  "matrix.h" "math.h"  
+"Window.h" "Window.cpp" 
+"Texture.h" "Texture.cpp"
+"Model.h" "Model.cpp"
+"Camera.h" "Camera.cpp"
+  
+"main.cpp"  "Shader.h" "Shader.cpp")
 
 set_target_properties(
     MoRenderer

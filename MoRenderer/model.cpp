@@ -23,7 +23,7 @@ Model::Model(const std::string file_name)
 
 				//构建一个顶点
 				for (int i = 0; i < 3; i++) {
-					Vertex vertex{};
+					Attributes vertex{};
 					auto& index = shape.mesh.indices[face_id + i];
 					vertex.position_os = {
 						attributes.vertices[3 * index.vertex_index + 0],

@@ -146,7 +146,6 @@ bool MoRenderer::DrawTriangle() {
 
 	// 三角形屏幕空间中的外接矩形
 	Vec2i bounding_min(0), bounding_max(0);
-
 	Vertex* vertex[3] = { &vertex_[0], &vertex_[1], &vertex_[2] };
 	// 顶点数据初始化
 	for (int k = 0; k < 3; k++) {
