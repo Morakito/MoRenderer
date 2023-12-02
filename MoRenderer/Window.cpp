@@ -21,23 +21,23 @@ void Window::WindowInit(const int width, const int height, const char* title)
 	LPVOID frame_buffer_ptr;
 	BITMAPINFOHEADER bitmap_info_header;
 
-	//注册窗口类
+	// 注册窗口类
 	RegisterWindowClass(title);
 
-	//创建窗口
+	// 创建窗口
 	hwnd_ = CreateWindow(title, title,
 		WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
 		0, 0, 0, 0, NULL, NULL, GetModuleHandle(NULL), NULL);
 
-	//初始化位图头格式
+	// 初始化位图头格式
 	InitBitmapHeader(bitmap_info_header, width, height);
 
-	//获得兼容性DC
+	// 获得兼容性DC
 	const HDC hdc = GetDC(hwnd_);
 	memory_dc_ = CreateCompatibleDC(hdc);
 	ReleaseDC(hwnd_, hdc);
 
-	//创建位图
+	// 创建位图
 	bitmap_dib_ = CreateDIBSection(memory_dc_, reinterpret_cast<BITMAPINFO*>(&bitmap_info_header),
 		DIB_RGB_COLORS, &frame_buffer_ptr, nullptr, 0); //创建设备无关句柄
 
@@ -47,8 +47,7 @@ void Window::WindowInit(const int width, const int height, const char* title)
 	width_ = width;
 	height_ = height;
 
-
-	//一个矩形范围 左上右下
+	// 一个矩形范围 左上右下
 	RECT rect = { 0, 0, width, height };
 	AdjustWindowRect(&rect, GetWindowLong(hwnd_, GWL_STYLE), 0);//调整窗口大小
 	const int wx = rect.right - rect.left;
@@ -61,12 +60,17 @@ void Window::WindowInit(const int width, const int height, const char* title)
 	SetForegroundWindow(hwnd_);
 	ShowWindow(hwnd_, SW_NORMAL);
 
-	//消息分派
+	// 消息分派
 	MessageDispatch();
 
-	//初始化keys, window_fb全为0
+	// 初始化keys, window_fb全为0
 	memset(frame_buffer_, 0, width_ * height_ * 4);
 	memset(keys_, 0, sizeof(char) * 512);
+
+
+	// 初始化LOG信息
+	num_frames_per_second_ = 0;
+	current_frame_time_ = PlatformGetTime();
 }
 
 void Window::WindowDestroy()
@@ -93,6 +97,13 @@ void Window::WindowDestroy()
 	}
 
 	free(window_);
+}
+
+void Window::WindowDisplay(const uint8_t* frame_buffer) 
+{
+	UpdateFpsData();
+	WindowDrawFrame(frame_buffer);
+	Window::MessageDispatch();
 }
 
 LRESULT MessageCallback(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -180,13 +191,12 @@ void Window::MessageDispatch()
 	}
 }
 
-void Window::WindowDisplay(const uint8_t* frame_buffer, const std::map<std::string, std::string>& log_messages) const
+void Window::WindowDrawFrame(const uint8_t* frame_buffer) const
 {
 	memcpy(frame_buffer_, frame_buffer, width_ * height_ * 4);
 
-
 	//显示Log信息
-	if (!log_messages.empty()) {
+	if (!log_messages_.empty()) {
 		LOGFONT log_font;								//改变输出字体
 		ZeroMemory(&log_font, sizeof(LOGFONT));
 		log_font.lfCharSet = ANSI_CHARSET;
@@ -199,15 +209,12 @@ void Window::WindowDisplay(const uint8_t* frame_buffer, const std::map<std::stri
 		SetBkColor(memory_dc_, RGB(80, 80, 80));
 
 		int log_index = 1;
-		for (auto const value : log_messages | std::views::values)
+		for (auto const value : log_messages_ | std::views::values)
 		{
 			TextOut(memory_dc_, 20, 20 * (log_index++),
 				value.c_str(),
 				strlen(value.c_str()));
 		}
-
-
-
 	}
 
 	//绘制frame buffer
@@ -226,6 +233,28 @@ Vec2f Window::GetMousePosition() const
 	ScreenToClient(hwnd_, &mouse_point);
 	auto mouse_position = Vec2f(static_cast<float>(mouse_point.x), static_cast<float>(mouse_point.y));
 	return mouse_position;
+}
+
+void Window::SetLogMessage(const std::string& log_type, const std::string& log_content)
+{
+	log_messages_[log_type] = log_content;
+}
+
+
+void Window::UpdateFpsData()
+{
+	num_frames_per_second_ += 1;
+	current_frame_time_ = PlatformGetTime();
+	if (current_frame_time_ - last_frame_time_ >= 1) {
+		const int frame_time_ms = static_cast<int>((current_frame_time_ - last_frame_time_) * 1000);
+		const int average_frame_time_ms = frame_time_ms / num_frames_per_second_;
+
+		const std::string fps_message = "FPS: " + std::to_string(num_frames_per_second_) + " / " + std::to_string(average_frame_time_ms) + " ms";
+
+		SetLogMessage("fps_message", fps_message);
+		num_frames_per_second_ = 0;
+		last_frame_time_ = current_frame_time_;
+	}
 }
 
 float Window::GetNativeTime() {
