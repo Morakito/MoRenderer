@@ -133,6 +133,8 @@ void Camera::UpdateUniformBuffer(UniformBuffer* uniform_buffer) const
 	uniform_buffer->proj_matrix = matrix_set_perspective(fov_, aspect_, near_plane_, far_plane_);;
 
 	uniform_buffer->CalculateRestMatrix();
+
+	uniform_buffer->camera_position = position_;
 }
 
 

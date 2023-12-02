@@ -26,6 +26,7 @@ struct UniformBuffer
 
 	// 光照数据
 	Vec3f light_direction;		// 光照方向，从着色点指向光源
+	Vec4f light_color;			// 光照颜色
 	Vec3f camera_position;		// 相机方向
 
 };
@@ -46,6 +47,7 @@ typedef std::function<Vec4f(int index, ShaderContext& output)> VertexShader;
 // 像素着色器：返回像素的颜色
 typedef std::function<Vec4f(ShaderContext& input)> PixelShader;
 
+// Blinn Phong光照模型
 class BlinnPhongShader
 {
 public:
@@ -65,7 +67,7 @@ public:
 	}
 
 	Vec4f VertexShaderFunction(int index, ShaderContext& output) const;
-	Vec4f PixelShaderFunction(ShaderContext& input);
+	Vec4f PixelShaderFunction(ShaderContext& input) const;
 
 public:
 	enum VaryingAttributes

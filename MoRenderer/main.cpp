@@ -27,7 +27,6 @@ int main() {
 
 
 	// 加载模型
-
 	std::string file_path = "C:/WorkSpace/MoRenderer/models/diablo3";
 	std::string file_name = "diablo3";
 	std::string texture_format = ".bmp";
@@ -41,51 +40,35 @@ int main() {
 	Vec3f camera_position = { 0, 0, 2 };					// 相机位置
 	Vec3f camera_target = { 0, 0, 0 };					// 相机看向的位置
 	Vec3f camera_up = { 0, 1, 0 };						// 相机向上的位置
-	Vec3f light_direction = { 0, -0.5f, -2 };				// 光照方向
 	float fov = 90.0f;
-
-
 	auto* camera = new Camera(camera_position, camera_target, camera_up, fov, static_cast<float>(width) / height);
 
-	BlinnPhongShader blinn_phong_shader;
-	blinn_phong_shader.uniform_buffer_->model_matrix = matrix_set_scale(1, 1, 1);
-	blinn_phong_shader.uniform_buffer_->view_matrix = matrix_look_at(camera_position, camera_target, camera_up);
-	blinn_phong_shader.uniform_buffer_->proj_matrix = matrix_set_perspective(fov, camera->aspect_, camera->near_plane_, camera->near_plane_);
-	blinn_phong_shader.uniform_buffer_->CalculateRestMatrix();
+	auto blinn_phong_shader = new BlinnPhongShader();
 
+	auto uniform_buffer = new UniformBuffer();
 
-	mo_renderer->SetVertexShader(blinn_phong_shader.vertex_shader_);
+	uniform_buffer->model_matrix = matrix_set_scale(1, 1, 1);
+	uniform_buffer->view_matrix = matrix_look_at(camera_position, camera_target, camera_up);
+	uniform_buffer->proj_matrix = matrix_set_perspective(fov, camera->aspect_, camera->near_plane_, camera->near_plane_);
+	uniform_buffer->CalculateRestMatrix();
 
-	// 像素着色器：使用Blinn Phong光照模型
-	mo_renderer->SetPixelShader([&](ShaderContext& input) -> Vec4f {
-		Vec2f uv = input.varying_vec2f[BlinnPhongShader::VARYING_TEXCOORD];
+	uniform_buffer->light_direction = { 0, -0.5f, -2 };
+	uniform_buffer->light_color = { 1.0f, 1.0f, 1.0f,1.0f };
+	uniform_buffer->camera_position = camera->position_;
 
-		Vec3f world_normal = (model->normal_map_->Sample2D(uv) * blinn_phong_shader.uniform_buffer_->normal_matrix).xyz();
-		Vec3f world_position = input.varying_vec3f[BlinnPhongShader::VARYING_TEXCOORD];
+	blinn_phong_shader->uniform_buffer_ = uniform_buffer;
+	blinn_phong_shader->model_ = model;
 
-		Vec3f light_dir = vector_normalize(-light_direction);
-		Vec3f view_dir = vector_normalize(camera->position_ - world_position);
+	mo_renderer->SetVertexShader(blinn_phong_shader->vertex_shader_);
+	mo_renderer->SetPixelShader(blinn_phong_shader->pixel_shader_);
 
-		//漫反射
-		Vec4f base_color = model->diffuse_map_->Sample2D(uv);
-		Vec4f diffuse = base_color * Saturate(vector_dot(light_dir, world_normal));
-
-		//高光
-		float specular_scale = model->specular_map_->Sample2D(uv).b * 5;
-		Vec3f half_dir = vector_normalize(view_dir + light_dir);
-		float intensity = pow(Saturate(vector_dot(world_normal, half_dir)), 20);
-		Vec4f specular = base_color * intensity * specular_scale;
-
-		Vec4f color = diffuse + specular;
-		return color;
-		});
 
 	while (!window->is_close_)
 	{
 		float current_time = Window::PlatformGetTime();
 
 		camera->HandleInputEvents();
-		camera->UpdateUniformBuffer(blinn_phong_shader.uniform_buffer_);
+		camera->UpdateUniformBuffer(blinn_phong_shader->uniform_buffer_);
 
 		// 渲染模型
 		mo_renderer->ClearFrameBuffer();
@@ -93,9 +76,9 @@ int main() {
 		{
 			// 设置三个顶点的输入，供 VS 读取
 			for (int j = 0; j < 3; j++) {
-				blinn_phong_shader.attributes_[j].position_os = model->vertices_[i + j].position_os;
-				blinn_phong_shader.attributes_[j].texcoord = model->vertices_[i + j].texcoord;
-				blinn_phong_shader.attributes_[j].normal = model->vertices_[i + j].normal;
+				blinn_phong_shader->attributes_[j].position_os = model->vertices_[i + j].position_os;
+				blinn_phong_shader->attributes_[j].texcoord = model->vertices_[i + j].texcoord;
+				blinn_phong_shader->attributes_[j].normal = model->vertices_[i + j].normal;
 			}
 
 			// 绘制三角形
