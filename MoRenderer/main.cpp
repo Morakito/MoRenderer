@@ -24,12 +24,14 @@ int main() {
 
 	const auto mo_renderer = new MoRenderer(width, height);
 	mo_renderer->SetRenderState(false, true);
+
+
 	// 加载模型
-	const std::string model_name = "C:/WorkSpace/MoRenderer/models/diablo3_pose.obj";
-	const auto model = new Model(model_name);
-	auto* diffuse_map = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_diffuse.bmp");
-	auto* normal_map = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_nm.bmp");
-	auto* specular_map = new Texture("C:/WorkSpace/MoRenderer/models/diablo3_pose_spec.bmp");
+
+	std::string file_path = "C:/WorkSpace/MoRenderer/models/diablo3";
+	std::string file_name = "diablo3";
+	std::string texture_format = ".bmp";
+	const auto model = new Model(file_path, file_name, texture_format);
 
 
 	std::string model_message = "vertex count: " + std::to_string(model->vertex_number_) + "  face count: " + std::to_string(model->face_number_) + "\n";
@@ -58,18 +60,18 @@ int main() {
 	mo_renderer->SetPixelShader([&](ShaderContext& input) -> Vec4f {
 		Vec2f uv = input.varying_vec2f[BlinnPhongShader::VARYING_TEXCOORD];
 
-		Vec3f world_normal = (normal_map->Sample2D(uv) * blinn_phong_shader.uniform_buffer_->normal_matrix).xyz();
+		Vec3f world_normal = (model->normal_map_->Sample2D(uv) * blinn_phong_shader.uniform_buffer_->normal_matrix).xyz();
 		Vec3f world_position = input.varying_vec3f[BlinnPhongShader::VARYING_TEXCOORD];
 
 		Vec3f light_dir = vector_normalize(-light_direction);
 		Vec3f view_dir = vector_normalize(camera->position_ - world_position);
 
 		//漫反射
-		Vec4f base_color = diffuse_map->Sample2D(uv);
+		Vec4f base_color = model->diffuse_map_->Sample2D(uv);
 		Vec4f diffuse = base_color * Saturate(vector_dot(light_dir, world_normal));
 
 		//高光
-		float specular_scale = specular_map->Sample2D(uv).b * 5;
+		float specular_scale = model->specular_map_->Sample2D(uv).b * 5;
 		Vec3f half_dir = vector_normalize(view_dir + light_dir);
 		float intensity = pow(Saturate(vector_dot(world_normal, half_dir)), 20);
 		Vec4f specular = base_color * intensity * specular_scale;
@@ -91,9 +93,9 @@ int main() {
 		{
 			// 设置三个顶点的输入，供 VS 读取
 			for (int j = 0; j < 3; j++) {
-				blinn_phong_shader.vs_input_[j].position_os = model->vertices_[i + j].position_os;
-				blinn_phong_shader.vs_input_[j].texcoord = model->vertices_[i + j].texcoord;
-				blinn_phong_shader.vs_input_[j].normal = model->vertices_[i + j].normal;
+				blinn_phong_shader.attributes_[j].position_os = model->vertices_[i + j].position_os;
+				blinn_phong_shader.attributes_[j].texcoord = model->vertices_[i + j].texcoord;
+				blinn_phong_shader.attributes_[j].normal = model->vertices_[i + j].normal;
 			}
 
 			// 绘制三角形

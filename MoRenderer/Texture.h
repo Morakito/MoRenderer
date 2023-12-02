@@ -6,18 +6,13 @@
 class Texture
 {
 public:
-	Texture(const char* filename);
+	Texture(const std::string& file_name);
 	~Texture();
 
 	// 纹理采样
-	Vec4f Sample2D(float u, float v) {
-		return SampleBilinear(u * textureWidth + 0.5f, v * textureHeight + 0.5f);
-	}
+	Vec4f Sample2D(float u, float v) const;
 
-	Vec4f Sample2D(const Vec2f& uv) {
-		return Sample2D(uv.x, uv.y);
-	}
-
+	Vec4f Sample2D(const Vec2f& uv) const;
 
 
 private:
@@ -27,8 +22,12 @@ private:
 	static ColorRGBA BilinearInterpolation(const ColorRGBA& color00, const ColorRGBA& color01, const ColorRGBA& color10, const ColorRGBA& color11, float t_x, float t_y);
 
 public:
-	int textureWidth, textureHeight, textureChannels;
-	unsigned char* textureData;
+	int texture_width_;					// 纹理宽度
+	int texture_height_;				// 纹理高度
+	int texture_channels_;				// 纹理通道数
+
+	bool has_data_;						// 是否存在数据，即是否成功加载贴图
+	unsigned char* texture_data_;		// 实际的图像数据
 };
 
 

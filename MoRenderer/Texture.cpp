@@ -8,26 +8,39 @@
 
 
 
-Texture::Texture(const char* filename)
+Texture::Texture(const std::string& file_name)
 {
-	textureData = stbi_load(filename, &textureWidth, &textureHeight, &textureChannels, STBI_default);
+	texture_data_ = stbi_load(file_name.c_str(), &texture_width_, &texture_height_, &texture_channels_, STBI_default);
+	has_data_ = (texture_data_ != nullptr);
 }
 
 Texture::~Texture()
 {
-	stbi_image_free(textureData);
+	stbi_image_free(texture_data_);
+}
+
+Vec4f Texture::Sample2D(const float u, const float v) const
+{
+	if (!has_data_) return {1.0f};
+
+	return SampleBilinear(u * texture_width_ + 0.5f, v * texture_height_ + 0.5f);
+}
+
+Vec4f Texture::Sample2D(const Vec2f& uv) const
+{
+	return Sample2D(uv.x, uv.y);
 }
 
 ColorRGBA Texture::GetPixelColor(const int x, const int y) const
 {
 	ColorRGBA color(0.0f);
-	if (x >= 0 && x < textureWidth &&
-		y >= 0 && y < textureHeight) {
-		const uint8_t* pixel_offset = textureData + (x + y * textureWidth) * textureChannels;
+	if (x >= 0 && x < texture_width_ &&
+		y >= 0 && y < texture_height_) {
+		const uint8_t* pixel_offset = texture_data_ + (x + y * texture_width_) * texture_channels_;
 		color.r = pixel_offset[0] / 255.0f;
 		color.g = pixel_offset[1] / 255.0f;
 		color.b = pixel_offset[2] / 255.0f;
-		color.a = textureChannels > 4 ? pixel_offset[3] / 255.0f : 1.0f;
+		color.a = texture_channels_ > 4 ? pixel_offset[3] / 255.0f : 1.0f;
 	}
 	return color;
 }

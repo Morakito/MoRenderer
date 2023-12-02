@@ -9,12 +9,12 @@
 
 struct UniformBuffer
 {
-	Mat4x4f model_matrix;
-	Mat4x4f view_matrix;
-	Mat4x4f proj_matrix;
-	Mat4x4f mvp_matrix;
+	Mat4x4f model_matrix;		// 模型变换矩阵
+	Mat4x4f view_matrix;		// 观察变换矩阵
+	Mat4x4f proj_matrix;		// 投影变换矩阵
+	Mat4x4f mvp_matrix;			// MVP变换矩阵
 
-	Mat4x4f normal_matrix;
+	Mat4x4f normal_matrix;		// 法线变换矩阵
 
 	void CalculateRestMatrix() {
 		mvp_matrix = proj_matrix * view_matrix * model_matrix;
@@ -23,6 +23,11 @@ struct UniformBuffer
 		// 使用原始变换矩阵的逆转置矩阵
 		normal_matrix = matrix_invert(model_matrix).Transpose();
 	}
+
+	// 光照数据
+	Vec3f light_direction;		// 光照方向，从着色点指向光源
+	Vec3f camera_position;		// 相机方向
+
 };
 
 // 着色器上下文，由 VS 设置，再由渲染器按像素逐点插值后，供 PS 读取
@@ -34,14 +39,11 @@ struct ShaderContext {
 };
 
 
-// 顶点着色器：因为是 C++ 编写，无需传递 attribute，传个 0-2 的顶点序号
-// 着色器函数直接在外层根据序号读取相应数据即可，最后需要返回一个坐标 position_
-// 各项 varying 设置到 output 里，由渲染器插值后传递给 PS 
+// 顶点着色器：返回顶点的裁剪空间坐标
 typedef std::function<Vec4f(int index, ShaderContext& output)> VertexShader;
 
 
-// 像素着色器：输入 ShaderContext，需要返回 Vec4f 类型的颜色
-// 三角形内每个点的 input 具体值会根据前面三个顶点的 output 插值得到
+// 像素着色器：返回像素的颜色
 typedef std::function<Vec4f(ShaderContext& input)> PixelShader;
 
 class BlinnPhongShader
@@ -50,16 +52,20 @@ public:
 	BlinnPhongShader()
 	{
 		uniform_buffer_ = new UniformBuffer();
-		vs_input_ = new Attributes[3];
+		attributes_ = new Attributes[3];
 
 		vertex_shader_ = [&](const int index, ShaderContext& output)->Vec4f
 			{
 				return VertexShaderFunction(index, output);
 			};
+		pixel_shader_ = [&](ShaderContext& input)->Vec4f
+			{
+				return PixelShaderFunction(input);
+			};
 	}
 
-	Vec4f VertexShaderFunction(int index, ShaderContext& output) ;
-	Vec4f PixelShaderFunction(ShaderContext& input) ;
+	Vec4f VertexShaderFunction(int index, ShaderContext& output) const;
+	Vec4f PixelShaderFunction(ShaderContext& input);
 
 public:
 	enum VaryingAttributes
@@ -69,9 +75,11 @@ public:
 	};
 
 	UniformBuffer* uniform_buffer_;
-	Attributes* vs_input_;
+	Attributes* attributes_;
+	Model* model_;
 
 	VertexShader vertex_shader_;
+	PixelShader pixel_shader_;
 };
 
 #endif // !SHADER_H

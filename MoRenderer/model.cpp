@@ -1,17 +1,19 @@
-#include "model.h"
+#include "Model.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
-Model::Model(const std::string file_name)
+Model::Model(const std::string file_path, const std::string file_name, const std::string texture_format)
 {
+	// 加载OBJ模型
 	{
 		tinyobj::attrib_t attributes;
 		std::vector<tinyobj::shape_t> shapes;
 		std::vector<tinyobj::material_t> materials;
 		std::string warn, err;
 
-		if (!tinyobj::LoadObj(&attributes, &shapes, &materials, &warn, &err, file_name.c_str())) {
+		std::string model_name = file_path + "/" + file_name + ".obj";
+		if (!LoadObj(&attributes, &shapes, &materials, &warn, &err, model_name.c_str())) {
 			throw std::runtime_error(warn + err);
 		}
 
@@ -48,4 +50,36 @@ Model::Model(const std::string file_name)
 		}
 	}
 
+	// 加载纹理
+	{
+		diffuse_map_ = new Texture(GetTextureFileName(file_path, file_name, DIFFUSE, texture_format));
+		normal_map_ = new Texture(GetTextureFileName(file_path, file_name, NORMAL, texture_format));
+		specular_map_ = new Texture(GetTextureFileName(file_path, file_name, SPECULAR, texture_format));
+	}
+}
+
+Model::~Model()
+{
+	delete diffuse_map_;
+	delete normal_map_;
+	delete specular_map_;
+	vertices_.clear();
+}
+
+std::string Model::GetTextureType(const TextureType texture_type)
+{
+	switch (texture_type)
+	{
+	case DIFFUSE:	return "diffuse";
+	case NORMAL:	return "normal";
+	case SPECULAR:	return "specular";
+	default:		return "unknown";
+	}
+}
+
+std::string Model::GetTextureFileName(const std::string& file_path, const std::string& file_name, const TextureType texture_type, const std::string& texture_format)
+{
+	const std::string texture_name = file_path + "/" + file_name + "_" + GetTextureType(texture_type) + texture_format;
+
+	return texture_name;
 }
