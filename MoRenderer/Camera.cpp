@@ -128,7 +128,6 @@ void Camera::HandleKeyEvents()
 
 void Camera::UpdateUniformBuffer(UniformBuffer* uniform_buffer) const
 {
-	uniform_buffer->model_matrix = matrix_set_scale(1, 1, 1);
 	uniform_buffer->view_matrix = matrix_look_at(position_, target_, up_);
 	uniform_buffer->proj_matrix = matrix_set_perspective(fov_, aspect_, near_plane_, far_plane_);;
 

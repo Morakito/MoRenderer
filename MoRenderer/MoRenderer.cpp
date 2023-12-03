@@ -1,5 +1,6 @@
 ﻿#include "MoRenderer.h"
 
+#include <optional>
 #include <ranges>
 
 void MoRenderer::CleanUp()
@@ -147,6 +148,7 @@ bool MoRenderer::DrawTriangle() {
 	// 三角形屏幕空间中的外接矩形
 	Vec2i bounding_min(0), bounding_max(0);
 	Vertex* vertex[3] = { &vertex_[0], &vertex_[1], &vertex_[2] };
+
 	// 顶点数据初始化
 	for (int k = 0; k < 3; k++) {
 		auto& [context, w_reciprocal, position, screen_position_f, screen_position_i] = *vertex[k];
@@ -162,10 +164,10 @@ bool MoRenderer::DrawTriangle() {
 
 		// 裁剪clip：三角形的任何一个顶点超过CVV就直接剔除
 		float w = position.w;
-		if (w == 0.0f) return false;
-		if (position.z < -w || position.z > w) return false;
-		if (position.x < -w || position.x > w) return false;
-		if (position.y < -w || position.y > w) return false;
+		//if (w == 0.0f) return false;
+		//if (position.z < -w || position.z > w) return false;
+		//if (position.x < -w || position.x > w) return false;
+		//if (position.y < -w || position.y > w) return false;
 
 		// 透视除法
 		w_reciprocal = 1.0f / w;
@@ -195,6 +197,7 @@ bool MoRenderer::DrawTriangle() {
 			bounding_max.y = Between(0, frame_buffer_height_ - 1, Max(bounding_max.y, screen_position_i.y));
 		}
 	}
+
 
 	// 只绘制线框，不绘制像素，直接退出
 	if (render_frame_ && !render_pixel_) {
@@ -231,15 +234,10 @@ bool MoRenderer::DrawTriangle() {
 
 	// 构建边缘方程
 	Vec2f bottom_left_point = { static_cast<float>(bounding_min.x) + 0.5f,static_cast<float>(bounding_min.y) + 0.5f };
-	auto* edge_equation_01 = new EdgeEquation(p0, p1, bottom_left_point, vertex[2]->w_reciprocal);
-	auto* edge_equation_12 = new EdgeEquation(p1, p2, bottom_left_point, vertex[0]->w_reciprocal);
-	auto* edge_equation_20 = new EdgeEquation(p2, p0, bottom_left_point, vertex[1]->w_reciprocal);
+	auto* edge_equation_0 = new EdgeEquation(p1, p2, bottom_left_point, vertex[0]->w_reciprocal);
+	auto* edge_equation_1 = new EdgeEquation(p2, p0, bottom_left_point, vertex[1]->w_reciprocal);
+	auto* edge_equation_2 = new EdgeEquation(p0, p1, bottom_left_point, vertex[2]->w_reciprocal);
 
-	float bc_denominator =
-		edge_equation_01->origin * edge_equation_01->w_reciprocal +
-		edge_equation_12->origin * edge_equation_12->w_reciprocal +
-		edge_equation_20->origin * edge_equation_20->w_reciprocal;
-	bc_denominator = 1 / bc_denominator;
 
 	// 迭代三角形外接矩形的所有点
 	for (int y = bounding_min.y; y <= bounding_max.y; y++) {
@@ -248,22 +246,39 @@ bool MoRenderer::DrawTriangle() {
 
 			// 判断点(x,y)是否位于三角形内部或者三角形边缘
 			// 当属于上边缘或者左边缘的时候，将e与1进行比较，从而跳过e=0的情况
-			float e01 = edge_equation_01->Evaluate(offset.x, offset.y);
-			if (e01 < (edge_equation_01->is_top_left ? 0 : 1)) continue;
+			float e0 = edge_equation_0->Evaluate(offset.x, offset.y);
+			if (e0 < (edge_equation_0->is_top_left ? 0 : 1)) continue;
 
-			float e12 = edge_equation_12->Evaluate(offset.x, offset.y);
-			if (e12 < (edge_equation_12->is_top_left ? 0 : 1)) continue;
+			float e1 = edge_equation_1->Evaluate(offset.x, offset.y);
+			if (e1 < (edge_equation_1->is_top_left ? 0 : 1)) continue;
 
-			float e20 = edge_equation_20->Evaluate(offset.x, offset.y);
-			if (e20 < (edge_equation_20->is_top_left ? 0 : 1)) continue;
+			float e2 = edge_equation_2->Evaluate(offset.x, offset.y);
+			if (e2 < (edge_equation_2->is_top_left ? 0 : 1)) continue;
 
-			// 计算重心坐标barycentric coordinates
-			float bc_p1 = e20 * edge_equation_20->w_reciprocal * bc_denominator;
-			float bc_p2 = e01 * edge_equation_01->w_reciprocal * bc_denominator;
-			float bc_p0 = 1 - bc_p1 - bc_p2;
+			// 计算重心坐标
+			float bc_denominator = e0 + e1 + e2;
+			bc_denominator = 1.0f / bc_denominator;
 
-			// 深度测试，使用反向z-buffer
-			float depth = vertex[0]->position.z * bc_p0 + vertex[1]->position.z * bc_p1 + vertex[2]->position.z * bc_p2;
+			float bc_p0 = e0 * bc_denominator;
+			float bc_p1 = e1 * bc_denominator;
+			float bc_p2 = e2 * bc_denominator;
+
+			// 计算透视正确的重心坐标
+			float bc_correct_denominator =
+				e0 * edge_equation_0->w_reciprocal +
+				e1 * edge_equation_1->w_reciprocal +
+				e2 * edge_equation_2->w_reciprocal;
+			bc_correct_denominator = 1.0f / bc_correct_denominator;
+
+			float bc_correct_p0 = e0 * edge_equation_0->w_reciprocal * bc_correct_denominator;
+			float bc_correct_p1 = e1 * edge_equation_1->w_reciprocal * bc_correct_denominator;
+			float bc_correct_p2 = e2 * edge_equation_2->w_reciprocal * bc_correct_denominator;
+
+			// 对深度进行插值，进行深度测试，使用反向z-buffer
+			float depth =
+				vertex[0]->position.z * bc_p0 +
+				vertex[1]->position.z * bc_p1 +
+				vertex[2]->position.z * bc_p2;
 			if (1 - depth < depth_buffer_[y][x]) continue;
 			depth_buffer_[y][x] = 1 - depth;
 
@@ -276,32 +291,32 @@ bool MoRenderer::DrawTriangle() {
 			ShaderContext& context_p2 = vertex[2]->context;
 
 			// 插值各项 varying
-			for (const auto& key : context_p0.varying_vec2f | std::views::keys) {
+			for (const auto& key : context_p0.varying_float | std::views::keys) {
 				float f0 = context_p0.varying_float[key];
 				float f1 = context_p1.varying_float[key];
 				float f2 = context_p2.varying_float[key];
-				attribute_current_vertex.varying_float[key] = bc_p0 * f0 + bc_p1 * f1 + bc_p2 * f2;
+				attribute_current_vertex.varying_float[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
 			}
 
 			for (const auto& key : context_p0.varying_vec2f | std::views::keys) {
 				const Vec2f& f0 = context_p0.varying_vec2f[key];
 				const Vec2f& f1 = context_p1.varying_vec2f[key];
 				const Vec2f& f2 = context_p2.varying_vec2f[key];
-				attribute_current_vertex.varying_vec2f[key] = bc_p0 * f0 + bc_p1 * f1 + bc_p2 * f2;
+				attribute_current_vertex.varying_vec2f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
 			}
 
 			for (const auto& key : context_p0.varying_vec3f | std::views::keys) {
 				const Vec3f& f0 = context_p0.varying_vec3f[key];
 				const Vec3f& f1 = context_p1.varying_vec3f[key];
 				const Vec3f& f2 = context_p2.varying_vec3f[key];
-				attribute_current_vertex.varying_vec3f[key] = bc_p0 * f0 + bc_p1 * f1 + bc_p2 * f2;
+				attribute_current_vertex.varying_vec3f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
 			}
 
 			for (const auto& key : context_p0.varying_vec4f | std::views::keys) {
 				const Vec4f& f0 = context_p0.varying_vec4f[key];
 				const Vec4f& f1 = context_p1.varying_vec4f[key];
 				const Vec4f& f2 = context_p2.varying_vec4f[key];
-				attribute_current_vertex.varying_vec4f[key] = bc_p0 * f0 + bc_p1 * f1 + bc_p2 * f2;
+				attribute_current_vertex.varying_vec4f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
 			}
 
 			// 执行像素着色器

@@ -12,7 +12,7 @@ public:
 	// ÎÆÀí²ÉÑù
 	Vec4f Sample2D(float u, float v) const;
 
-	Vec4f Sample2D(const Vec2f& uv) const;
+	Vec4f Sample2D( Vec2f uv) const;
 
 
 private:

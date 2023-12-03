@@ -12,6 +12,8 @@ Texture::Texture(const std::string& file_name)
 {
 	texture_data_ = stbi_load(file_name.c_str(), &texture_width_, &texture_height_, &texture_channels_, STBI_default);
 	has_data_ = (texture_data_ != nullptr);
+
+	std::cout << has_data_ << std::endl;
 }
 
 Texture::~Texture()
@@ -19,15 +21,21 @@ Texture::~Texture()
 	stbi_image_free(texture_data_);
 }
 
-Vec4f Texture::Sample2D(const float u, const float v) const
+Vec4f Texture::Sample2D(float u, float v) const
 {
-	if (!has_data_) return {1.0f};
+	if (!has_data_) return { 1.0f };
 
-	return SampleBilinear(u * texture_width_ + 0.5f, v * texture_height_ + 0.5f);
+	u = fmod(u, 1.0f);
+	v = fmod(v, 1.0f);
+
+	return SampleBilinear(u * texture_width_, v * texture_height_);
 }
 
-Vec4f Texture::Sample2D(const Vec2f& uv) const
+Vec4f Texture::Sample2D(Vec2f uv) const
 {
+	uv.x = fmod(uv.x, 1.0f);
+	uv.y = fmod(uv.y, 1.0f);
+
 	return Sample2D(uv.x, uv.y);
 }
 
@@ -45,13 +53,13 @@ ColorRGBA Texture::GetPixelColor(const int x, const int y) const
 	return color;
 }
 
-ColorRGBA Texture::SampleBilinear(float x, float y) const
+ColorRGBA Texture::SampleBilinear(const float x, const float y) const
 {
-	int32_t x1 = floor(x);
-	int32_t y1 = floor(y);
+	const auto x1 = static_cast<int>(floor(x));
+	const auto y1 = static_cast<int>(floor(y));
 
-	int32_t x2 = ceil(x);
-	int32_t y2 = ceil(y);
+	const auto x2 = static_cast<int> (ceil(x));
+	const auto y2 = static_cast<int> (ceil(y));
 
 	const float t_x = x - x1;
 	const float t_y = y - y1;

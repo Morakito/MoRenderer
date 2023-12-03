@@ -103,7 +103,7 @@ void Window::WindowDisplay(const uint8_t* frame_buffer)
 {
 	UpdateFpsData();
 	WindowDrawFrame(frame_buffer);
-	Window::MessageDispatch();
+	MessageDispatch();
 }
 
 LRESULT MessageCallback(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)

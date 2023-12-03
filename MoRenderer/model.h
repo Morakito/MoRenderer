@@ -9,14 +9,17 @@
 struct Attributes {
 	Vec3f position_os;
 	Vec2f texcoord;
-	Vec3f normal;
+	Vec3f normal_os;
+	Vec4f tangent_os;
 };
 
 enum TextureType
 {
-	DIFFUSE,
+	BASE_COLOR,
 	NORMAL,
-	SPECULAR
+	ROUGHNESS,
+	METALLIC,
+	AMBIENT_OCCLUSION,
 };
 
 class Model {
@@ -31,14 +34,16 @@ public:
 	static std::string GetTextureFileName(const std::string& file_path, const std::string& file_name, TextureType texture_type, const std::string& texture_format);
 
 public:
-	std::vector<Attributes> vertices_;
+	std::vector<Attributes> attributes_;
 
 	int vertex_number_;
 	int face_number_;
 
-	Texture* diffuse_map_;
+	Texture* base_color_map_;
 	Texture* normal_map_;
-	Texture* specular_map_;
+	Texture* roughness_map_;
+	Texture* metallic_map_;
+	Texture* ambient_occlusion_map_;
 };
 
 

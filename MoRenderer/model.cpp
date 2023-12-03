@@ -3,6 +3,41 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
+static Vec4f calculate_tangent(Attributes* attribute[3], int index)
+{
+	//calculate the difference in UV coordinate
+	Vec2f uvs[3] = {
+		attribute[0]->texcoord,
+		attribute[1]->texcoord ,
+		attribute[2]->texcoord
+	};
+
+	Vec3f position_os[3] = {
+	attribute[0]->position_os,
+	attribute[1]->position_os ,
+	attribute[2]->position_os
+	};
+
+	Vec3f normal = attribute[0]->normal_os;
+
+	float x1 = uvs[1][0] - uvs[0][0];
+	float y1 = uvs[1][1] - uvs[0][1];
+	float x2 = uvs[2][0] - uvs[0][0];
+	float y2 = uvs[2][1] - uvs[0][1];
+	float det = (x1 * y2 - x2 * y1);
+
+	//calculate the difference in world pos
+	Vec3f e1 = position_os[1] - position_os[0];
+	Vec3f e2 = position_os[2] - position_os[0];
+
+	//calculate tangent-axis and bitangent-axis
+	Vec3f t = e1 * y2 + e2 * (-y1);
+	t /= det;
+	t = vector_normalize(t - vector_dot(t, normal) * normal);
+
+	return  t.xyz1();
+}
+
 Model::Model(const std::string file_path, const std::string file_name, const std::string texture_format)
 {
 	// 加载OBJ模型
@@ -23,26 +58,28 @@ Model::Model(const std::string file_path, const std::string file_name, const std
 		for (const auto& shape : shapes) {
 			for (size_t face_id = 0; face_id < shape.mesh.indices.size();) {
 
-				//构建一个顶点
-				for (int i = 0; i < 3; i++) {
-					Attributes vertex{};
+				// 构建一个顶点
+				for (size_t i = 0; i < 3; i++) {
+					Attributes attribute{};
 					auto& index = shape.mesh.indices[face_id + i];
-					vertex.position_os = {
+					attribute.position_os = {
 						attributes.vertices[3 * index.vertex_index + 0],
 						attributes.vertices[3 * index.vertex_index + 1],
 						attributes.vertices[3 * index.vertex_index + 2]
 					};
-					vertex.texcoord = {
+					attribute.texcoord = {
 						attributes.texcoords[2 * index.texcoord_index + 0],
 						1.0f - attributes.texcoords[2 * index.texcoord_index + 1]
 					};
-					vertex.normal = {
+					attribute.normal_os = {
 						attributes.normals[3 * index.normal_index + 0],
 						attributes.normals[3 * index.normal_index + 1],
 						attributes.normals[3 * index.normal_index + 2],
 					};
-					vertices_.push_back(vertex);
+					attribute.tangent_os = Vec4f(1.0f, 0.0f, 0.0f, 1.0f);
+					attributes_.push_back(attribute);
 				}
+
 				face_id += 3;
 				vertex_number_ += 3;
 				face_number_ += 1;
@@ -52,28 +89,39 @@ Model::Model(const std::string file_path, const std::string file_name, const std
 
 	// 加载纹理
 	{
-		diffuse_map_ = new Texture(GetTextureFileName(file_path, file_name, DIFFUSE, texture_format));
+		base_color_map_ = new Texture(GetTextureFileName(file_path, file_name, BASE_COLOR, texture_format));
 		normal_map_ = new Texture(GetTextureFileName(file_path, file_name, NORMAL, texture_format));
-		specular_map_ = new Texture(GetTextureFileName(file_path, file_name, SPECULAR, texture_format));
+		roughness_map_ = new Texture(GetTextureFileName(file_path, file_name, ROUGHNESS, texture_format));
+		metallic_map_ = new Texture(GetTextureFileName(file_path, file_name, METALLIC, texture_format));
+		ambient_occlusion_map_ = new Texture(GetTextureFileName(file_path, file_name, AMBIENT_OCCLUSION, texture_format));
 	}
 }
 
+
+
 Model::~Model()
 {
-	delete diffuse_map_;
+	delete base_color_map_;
 	delete normal_map_;
-	delete specular_map_;
-	vertices_.clear();
+	delete roughness_map_;
+	delete metallic_map_;
+	delete ambient_occlusion_map_;
+
+	attributes_.clear();
 }
 
 std::string Model::GetTextureType(const TextureType texture_type)
 {
+
 	switch (texture_type)
 	{
-	case DIFFUSE:	return "diffuse";
-	case NORMAL:	return "normal";
-	case SPECULAR:	return "specular";
-	default:		return "unknown";
+	case BASE_COLOR:			return "basecolor";
+	case NORMAL:				return "normal";
+	case ROUGHNESS:				return "roughness";
+	case METALLIC:				return "metallic";
+	case AMBIENT_OCCLUSION:		return "ambient_occlusion";
+
+	default:					return "unknown";
 	}
 }
 

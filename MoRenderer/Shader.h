@@ -73,7 +73,10 @@ public:
 	enum VaryingAttributes
 	{
 		VARYING_TEXCOORD = 0,			// 纹理坐标
-		VARYING_POSITION_WS = 1			// 世界坐标
+		VARYING_POSITION_WS = 1,		// 世界空间坐标
+		VARYING_NORMAL_WS = 2,			// 世界空间法线
+		VARYING_TANGENT_WS = 3			// 世界空间切线
+
 	};
 
 	UniformBuffer* uniform_buffer_;

@@ -4,6 +4,7 @@
 #include "matrix.h"
 #include  <cmath>
 
+
 constexpr float kPi = 3.1415926f;
 constexpr float kEpsilon = 1e-5f;
 
@@ -191,6 +192,33 @@ inline static Mat4x4f matrix_set_perspective(float fov, const float aspect, floa
 
 	return  m;
 }
+
+/*
+ * 根据TBN矩阵计算扰动法线
+ *
+ *	t.x		t.y		t.z		0
+ *	b.x		b.y		b.z		0
+ *	n.x		n.y		n.z		0
+ *	0		0		0		1
+ *
+ *
+ */
+inline static Vec3f calculate_normal(const Vec3f& normal_ws, const Vec4f& tangent_ws, const Vec3f& perturb_normal)
+{
+	const Vec3f n = vector_normalize(normal_ws);
+	const Vec3f t = vector_normalize(tangent_ws.xyz());
+	const Vec3f b = vector_cross(n, t);
+
+	Mat4x4f tbn = matrix_set_zero();
+	tbn.SetRow(0, Vec4f(t.x, t.y, t.z, 0));
+	tbn.SetRow(1, Vec4f(b.x, b.y, b.z, 0));
+	tbn.SetRow(2, Vec4f(n.x, n.y, n.z, 0));
+	tbn.m[3][3] = 1;
+
+	return (tbn * perturb_normal.xyz1()).xyz() * tangent_ws.w;
+}
+
+
 
 #pragma endregion
 
