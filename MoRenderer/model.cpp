@@ -67,10 +67,14 @@ Model::Model(const std::string file_path, const std::string file_name, const std
 						attributes.vertices[3 * index.vertex_index + 1],
 						attributes.vertices[3 * index.vertex_index + 2]
 					};
-					attribute.texcoord = {
-						attributes.texcoords[2 * index.texcoord_index + 0],
-						1.0f - attributes.texcoords[2 * index.texcoord_index + 1]
-					};
+
+					// 部分uv值大于1，先将uv值转换到[0-1]区间中
+					// uv坐标的原点位于左下角，贴图数据的原点位于左上角，因此需要在v轴上反向
+					float u = attributes.texcoords[2 * index.texcoord_index + 0];
+					float v = attributes.texcoords[2 * index.texcoord_index + 1];
+					v = 1.0f - fmod(v, 1.0f);
+					attribute.texcoord = {u,v};
+
 					attribute.normal_os = {
 						attributes.normals[3 * index.normal_index + 0],
 						attributes.normals[3 * index.normal_index + 1],

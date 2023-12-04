@@ -25,16 +25,16 @@ Vec4f Texture::Sample2D(float u, float v) const
 {
 	if (!has_data_) return { 1.0f };
 
-	u = fmod(u, 1.0f);
-	v = fmod(v, 1.0f);
+	u = fmod(u, 1);
+	v = fmod(v, 1);
 
 	return SampleBilinear(u * texture_width_, v * texture_height_);
 }
 
 Vec4f Texture::Sample2D(Vec2f uv) const
 {
-	uv.x = fmod(uv.x, 1.0f);
-	uv.y = fmod(uv.y, 1.0f);
+	uv.x = fmod(uv.x, 1);
+	uv.y = fmod(uv.y, 1);
 
 	return Sample2D(uv.x, uv.y);
 }

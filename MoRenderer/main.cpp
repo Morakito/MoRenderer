@@ -17,12 +17,12 @@ int main() {
 
 	// ¼ÓÔØÄ£ÐÍ
 	std::string file_path, file_name, texture_format;
-	file_path = "C:/WorkSpace/MoRenderer/models/Cerberus";
-	file_name = "Cerberus";
+
+	file_path = "C:/WorkSpace/MoRenderer/models/helmet";
+	file_name = "helmet";
 	texture_format = ".tga";
 
 	const auto model = new Model(file_path, file_name, texture_format);
-
 	const std::string model_message = "vertex count: " + std::to_string(model->vertex_number_) + "  face count: " + std::to_string(model->face_number_) + "\n";
 	window->SetLogMessage("model_message", model_message);
 
@@ -36,7 +36,7 @@ int main() {
 	const auto blinn_phong_shader = new BlinnPhongShader();
 
 	const auto uniform_buffer = new UniformBuffer();
-	uniform_buffer->model_matrix =  matrix_set_scale(1, 1, 1);
+	uniform_buffer->model_matrix = matrix_set_rotate(1.0f, 0.0f, 0.0f, -kPi * 0.5f) * matrix_set_scale(1, 1, 1);
 	uniform_buffer->view_matrix = matrix_look_at(camera_position, camera_target, camera_up);
 	uniform_buffer->proj_matrix = matrix_set_perspective(fov, camera->aspect_, camera->near_plane_, camera->near_plane_);
 	uniform_buffer->CalculateRestMatrix();

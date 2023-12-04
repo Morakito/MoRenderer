@@ -228,10 +228,6 @@ bool MoRenderer::DrawTriangle() {
 	Vec2f p1 = vertex[1]->screen_position_f;
 	Vec2f p2 = vertex[2]->screen_position_f;
 
-	// 屏幕空间，退化三角形剔除
-	float triangle_area = Abs(vector_cross(p1 - p0, p2 - p0));
-	if (triangle_area <= 0) return false;
-
 	// 构建边缘方程
 	Vec2f bottom_left_point = { static_cast<float>(bounding_min.x) + 0.5f,static_cast<float>(bounding_min.y) + 0.5f };
 	auto* edge_equation_0 = new EdgeEquation(p1, p2, bottom_left_point, vertex[0]->w_reciprocal);

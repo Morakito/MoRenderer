@@ -37,7 +37,10 @@ Vec4f BlinnPhongShader::PixelShaderFunction(ShaderContext& input) const
 	Vec4f ambient_color = { 0.1f,0.1f ,0.1f ,0.1f };
 
 	// Âþ·´Éä
+
+	std::cout << uv << std::endl;
 	Vec4f base_color = model_->base_color_map_->Sample2D(uv);
+	//std::cout << base_color << std::endl;
 	Vec4f diffuse = light_color * base_color * Saturate(vector_dot(light_dir, normal_ws));
 
 	// ¸ß¹â
@@ -46,5 +49,6 @@ Vec4f BlinnPhongShader::PixelShaderFunction(ShaderContext& input) const
 	Vec4f specular = light_color * specular_intensity;
 
 	Vec4f blinn_phong_color = ambient_color + diffuse + specular;
+	blinn_phong_color = diffuse;
 	return blinn_phong_color;
 }
