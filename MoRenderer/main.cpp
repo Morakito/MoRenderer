@@ -22,6 +22,11 @@ int main() {
 	file_name = "helmet";
 	texture_format = ".tga";
 
+	//file_path = "C:/WorkSpace/MoRenderer/models/Cerberus";
+	//file_name = "Cerberus";
+	//texture_format = ".tga";
+
+
 	const auto model = new Model(file_path, file_name, texture_format);
 	const std::string model_message = "vertex count: " + std::to_string(model->vertex_number_) + "  face count: " + std::to_string(model->face_number_) + "\n";
 	window->SetLogMessage("model_message", model_message);
@@ -71,7 +76,6 @@ int main() {
 				blinn_phong_shader->attributes_[j].normal_os = model->attributes_[i + j].normal_os;
 				blinn_phong_shader->attributes_[j].tangent_os = model->attributes_[i + j].tangent_os;
 			}
-
 
 			// »æÖÆÈý½ÇÐÎ
 			mo_renderer->DrawTriangle();

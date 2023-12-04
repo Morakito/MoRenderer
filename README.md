@@ -13,30 +13,35 @@ MoRenderer is a software rasterization renderer based on c++11. The main purpose
 -   Programmable shader（writing in c++）
     -   vertex shader
     -   pixel shader
--   culling
-    -   back-face culling
--   z-buffer, depth testing
+-   culling & clipping
+    -   back-face culling: use the normal of the triangle plane
+    -   homogeneous clipping: clip is performed only for the near clipping plane
+-   z-buffer
+    -   depth testing
+    -   reverse z-buffer 
 -   Edge Equation
-    -   inner test of triangles
+    -   traversal triangle using a bounding rectangle
+    -   the Edge Equation is used to perform the inside test of the triangle
     -   Perspective correct interpolation
     -   use Top-Left rule to handle boundary pixels
--   bilinear interpolation
-    -   to sample the texture for better texture effect
+-   texture sampling
+    -   use bilinear interpolation to get better texture effect
 -   orbital camera controls
     - Orbit
     - Pan
     - Zoom
+    - Reset
+-   tangent space normal mapping
 -   shading model
     -   Blinn-Phong shading
 
+
 ## ToDo List
 
--   homogeneous clipping
 -   image-based lighting (IBL)
 -   PBR shading
 -   tone mapping
 -   material inspector
--   tangent space normal mapping
 
 ## Build
 
@@ -56,6 +61,7 @@ start Renderer.sln
 -   Pan: right mouse button
 -   Zoom: mouse wheel \ Q E
 -   move model: W A S D
+-   Reset: Space
 ## Reference
 
 [stb_image.h](https://github.com/nothings/stb "stb_image")

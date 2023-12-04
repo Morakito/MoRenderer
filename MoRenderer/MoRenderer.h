@@ -1,17 +1,12 @@
 ﻿#ifndef MO_RENDERER_H
 #define MO_RENDERER_H
 
-#include <map>
 #include <functional>
 #include <cstdint>
-
+#include <ranges>
 
 #include "math.h"
-#include "model.h"
 #include  "Shader.h"
-//---------------------------------------------------------------------
-// 着色器定义
-//---------------------------------------------------------------------
 
 class MoRenderer
 {
@@ -62,32 +57,22 @@ public:
 
 
 public:
-
-	// color buffer 里画线
-	void DrawLine(const int x1, const int y1, const int x2, const int y2) const {
-		if (color_buffer_) DrawLine(x1, y1, x2, y2, color_foreground_);
-	}
-
-	// color buffer 里画点
-	void SetPixel(const int x, const int y, const Vec4f& cc) const { SetBuffer(color_buffer_, x, y, cc); }
-	void SetPixel(const int x, const int y, const Vec3f& cc)const { SetBuffer(color_buffer_, x, y, cc.xyz1()); }
-
-	// 绘制一条线
-	void DrawLine(int x1, int y1, int x2, int y2, const Vec4f& color) const;
-
-	// 绘制一个三角形
-	bool DrawTriangle();
-
-
-public:
 	// 顶点结构体
 	struct Vertex {
+		bool has_transformed;			// 是否已经完成了顶点变换
 		ShaderContext context;			// 上下文
 		float w_reciprocal;				// w 的倒数
 		Vec4f position;					// 裁剪空间坐标	范围[-1,1]
 		Vec2f screen_position_f;		// 屏幕坐标		范围x~[0.5, frame_buffer_width_+ 0.5] y~[0.5, frame_buffer_height_+ 0.5]
 		Vec2i screen_position_i;		// 整数屏幕坐标  范围x~[0, frame_buffer_width_], y~[0, frame_buffer_height_]
+
+		Vertex() {
+			has_transformed = false;
+		}
+
 	};
+
+	static Vertex& VertexLerp(Vertex& vertex_p0, Vertex& vertex_p1, float ratio);
 
 	// 边缘方程e(x, y)（详见RTR4 章节23.1）
 	struct EdgeEquation
@@ -128,19 +113,54 @@ public:
 		}
 	};
 
+	// 裁剪空间下的裁剪平面
+	enum ClipPlane
+	{
+		W_Plane,
+		X_RIGHT,
+		X_LEFT,
+		Y_TOP,
+		Y_BOTTOM,
+		Z_Near,
+		Z_FAR
+	};
+
 public:
-	uint8_t* color_buffer_;    // 颜色缓存
-	float** depth_buffer_;    // 深度缓存
+	// color buffer 里画线段
+	void DrawLine(const int x1, const int y1, const int x2, const int y2) const {
+		if (color_buffer_) DrawLine(x1, y1, x2, y2, color_foreground_);
+	}
 
-	int frame_buffer_width_;            // frame buffer 宽度
-	int frame_buffer_height_;           // frame buffer 高度
-	Vec4f color_foreground_;       // 前景色：画线时候用
-	Vec4f color_background_;       // 背景色：Clear 时候用
+	// color buffer 里画点
+	void SetPixel(const int x, const int y, const Vec4f& cc) const { SetBuffer(color_buffer_, x, y, cc); }
+	void SetPixel(const int x, const int y, const Vec3f& cc)const { SetBuffer(color_buffer_, x, y, cc.xyz1()); }
 
-	Vertex vertex_[3];        // 三角形的三个顶点
+	int ClipWithPlane(ClipPlane clip_plane, Vertex vertex[3]);
 
-	bool render_frame_;       // 是否绘制线框
-	bool render_pixel_;       // 是否填充像素
+	// 绘制三角形
+	void DrawTriangle();
+	// 光栅化三角形
+	void RasterizeTriangle(Vertex vertex[3]) const;
+
+	// 绘制线框
+	void DrawWireFrame(Vertex vertex[3]) const;
+	// 绘制一条线
+	void DrawLine(int x1, int y1, int x2, int y2, const Vec4f& color) const;
+
+public:
+	uint8_t* color_buffer_;			// 颜色缓存
+	float** depth_buffer_;			// 深度缓存
+
+	int frame_buffer_width_;		// frame buffer 宽度
+	int frame_buffer_height_;		// frame buffer 高度
+	Vec4f color_foreground_;		// 前景色：画线时候用
+	Vec4f color_background_;		// 背景色：Clear 时候用
+
+	Vertex vertex_[3];				// 三角形的顶点
+	Vertex clip_vertex_[4];			// 三角形的顶点
+
+	bool render_frame_;				// 是否绘制线框
+	bool render_pixel_;				// 是否填充像素
 
 	VertexShader vertex_shader_;
 	PixelShader pixel_shader_;

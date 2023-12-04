@@ -1,7 +1,129 @@
 ﻿#include "MoRenderer.h"
+#include "MoRenderer.h"
 
 #include <optional>
 #include <ranges>
+
+
+// 顶点是否位于可视空间内部
+// 此时vertex位于裁剪空间中，没有经过透视除法
+// 使用DirectX中的设置，近裁剪平面会映射到z=0
+bool IsVertexVisible(const Vec4f& vertex) {
+	return
+		fabs(vertex.x) <= vertex.w &&
+		fabs(vertex.y) <= vertex.w &&
+		vertex.z >= 0 && vertex.z <= vertex.w;
+}
+
+// 顶点是否位于某一侧裁剪平面内侧
+// 此时vertex位于裁剪空间中，没有经过透视除法
+// 使用DirectX中的设置，近裁剪平面会映射到z=0
+bool IsInsidePlane(MoRenderer::ClipPlane clip_plane, const Vec4f& vertex)
+{
+	bool result = false;
+	switch (clip_plane)
+	{
+		// 防止进行透视除法时出现数值溢出
+	case MoRenderer::W_Plane:
+		result = vertex.w >= kEpsilon;
+		break;
+	case MoRenderer::X_RIGHT:
+		result = vertex.x <= vertex.w;
+		break;
+	case MoRenderer::X_LEFT:
+		result = vertex.x >= -vertex.w;
+		break;
+	case MoRenderer::Y_TOP:
+		result = vertex.y <= vertex.w;
+		break;
+	case MoRenderer::Y_BOTTOM:
+		result = vertex.y >= -vertex.w;
+		break;
+	case MoRenderer::Z_Near:
+		result = vertex.z >= 0;
+		break;
+	case MoRenderer::Z_FAR:
+		result = vertex.z <= vertex.w;
+		break;
+
+	default:;
+	}
+
+	return  result;
+}
+
+// 获取裁剪空间下，与裁剪平面的比例系数，用于生成与裁剪平面的交点
+float GetIntersectRatio(MoRenderer::ClipPlane clip_plane, const Vec4f& pre_vertex, const Vec4f& cur_vertex)
+{
+	float intersect_ratio = 1.0f;
+	switch (clip_plane)
+	{
+	case MoRenderer::X_RIGHT:
+		intersect_ratio = (pre_vertex.w - pre_vertex.x) /
+			((pre_vertex.w - pre_vertex.x) - (cur_vertex.w - cur_vertex.x));
+		break;
+	case MoRenderer::X_LEFT:
+		intersect_ratio = (pre_vertex.w + pre_vertex.x) /
+			((pre_vertex.w + pre_vertex.x) - (cur_vertex.w + cur_vertex.x));
+		break;
+	case MoRenderer::Y_TOP:
+		intersect_ratio = (pre_vertex.w - pre_vertex.y) /
+			((pre_vertex.w - pre_vertex.y) - (cur_vertex.w - cur_vertex.y));
+		break;
+	case MoRenderer::Y_BOTTOM:
+		intersect_ratio = (pre_vertex.w + pre_vertex.y) /
+			((pre_vertex.w + pre_vertex.y) - (cur_vertex.w + cur_vertex.y));
+		break;
+	case MoRenderer::Z_Near:
+		// 由于使用DirectX中的投影矩阵，将near plane映射到z=0上，因此比例系数的计算公式有所改变
+		intersect_ratio = (pre_vertex.z / pre_vertex.w) /
+			(pre_vertex.z / pre_vertex.w - cur_vertex.z / cur_vertex.w);
+		break;
+	case MoRenderer::Z_FAR:
+		intersect_ratio = (pre_vertex.w + pre_vertex.z) /
+			((pre_vertex.w + pre_vertex.z) - (cur_vertex.w + cur_vertex.z));
+		break;
+	default:;
+	}
+
+	return  intersect_ratio;
+}
+
+// 详见https://fabiensanglard.net/polygon_codec/
+int MoRenderer::ClipWithPlane(ClipPlane clip_plane, Vertex vertex[3])
+{
+	int out_vertex_count = 0;
+	constexpr int vertex_count = 3;
+
+	for (int i = 0; i < vertex_count; i++)
+	{
+		const int cur_index = i;
+		const int pre_index = (i - 1 + vertex_count) % vertex_count;
+
+		Vec4f cur_vertex = vertex[cur_index].position;
+		Vec4f pre_vertex = vertex[pre_index].position;
+
+		const bool is_cur_inside = IsInsidePlane(clip_plane, cur_vertex);
+		const bool is_pre_inside = IsInsidePlane(clip_plane, pre_vertex);
+
+		if (is_cur_inside ^ is_pre_inside)
+		{
+			const float ratio = GetIntersectRatio(clip_plane, pre_vertex, cur_vertex);
+			clip_vertex_[out_vertex_count] = VertexLerp(vertex[pre_index], vertex[cur_index], ratio);
+			out_vertex_count++;
+		}
+
+		if (is_cur_inside)
+		{
+			clip_vertex_[out_vertex_count] = vertex[cur_index];
+			out_vertex_count++;
+		}
+	}
+
+	assert(out_vertex_count <= 4);
+	return  out_vertex_count;
+}
+
 
 void MoRenderer::CleanUp()
 {
@@ -74,6 +196,9 @@ void MoRenderer::ClearFrameBuffer() const
 
 void MoRenderer::SetBuffer(uint8_t* buffer, const int x, const int y, const Vec4f& color) const
 {
+	if (x < 0 || x>frame_buffer_width_ - 1) return;
+	if (y < 0 || y>frame_buffer_height_ - 1) return;
+
 	const ColorRGBA32Bit color_32_bit = vector_to_32bit_color(color);
 	const int base_address = frame_buffer_width_ * (4 * y) + 4 * x;
 	//32 bit位图存储顺序，从低到高依次为BGRA
@@ -83,8 +208,58 @@ void MoRenderer::SetBuffer(uint8_t* buffer, const int x, const int y, const Vec4
 	buffer[base_address + 3] = color_32_bit.a;
 }
 
+MoRenderer::Vertex& MoRenderer::VertexLerp(Vertex& vertex_p0, Vertex& vertex_p1, float ratio)
+{
+	auto* vertex = new Vertex();
+	vertex->position = vector_lerp(vertex_p0.position, vertex_p1.position, ratio);
+	ShaderContext& context = vertex->context;
+
+	ShaderContext& context_p0 = vertex_p0.context;
+	ShaderContext& context_p1 = vertex_p1.context;
+
+	for (const auto& key : context_p0.varying_float | std::views::keys) {
+		float f0 = context_p0.varying_float[key];
+		float f1 = context_p1.varying_float[key];
+		context.varying_float[key] = std::lerp(f0, f1, ratio);
+	}
+
+	for (const auto& key : context_p0.varying_vec2f | std::views::keys) {
+		const Vec2f& f0 = context_p0.varying_vec2f[key];
+		const Vec2f& f1 = context_p1.varying_vec2f[key];
+		context.varying_vec2f[key] = vector_lerp(f0, f1, ratio);
+	}
+
+	for (const auto& key : context_p0.varying_vec3f | std::views::keys) {
+		const Vec3f& f0 = context_p0.varying_vec3f[key];
+		const Vec3f& f1 = context_p1.varying_vec3f[key];
+		context.varying_vec3f[key] = vector_lerp(f0, f1, ratio);
+
+	}
+
+	for (const auto& key : context_p0.varying_vec4f | std::views::keys) {
+		const Vec4f& f0 = context_p0.varying_vec4f[key];
+		const Vec4f& f1 = context_p1.varying_vec4f[key];
+		context.varying_vec4f[key] = vector_lerp(f0, f1, ratio);
+	}
+
+	return  *vertex;
+}
+
+void MoRenderer::DrawWireFrame(Vertex vertex[3]) const
+{
+	DrawLine(vertex[0].screen_position_i.x, vertex[0].screen_position_i.y, vertex[1].screen_position_i.x, vertex[1].screen_position_i.y);
+	DrawLine(vertex[1].screen_position_i.x, vertex[1].screen_position_i.y, vertex[2].screen_position_i.x, vertex[2].screen_position_i.y);
+	DrawLine(vertex[2].screen_position_i.x, vertex[2].screen_position_i.y, vertex[0].screen_position_i.x, vertex[0].screen_position_i.y);
+}
+
 void MoRenderer::DrawLine(int x1, int y1, int x2, int y2, const Vec4f& color) const
 {
+
+	x1 = Between(0, frame_buffer_width_ - 1, x1);
+	x2 = Between(0, frame_buffer_width_ - 1, x2);
+	y1 = Between(0, frame_buffer_height_ - 1, y1);
+	y2 = Between(0, frame_buffer_height_ - 1, y2);
+
 	int x, y;
 	if (x1 == x2 && y1 == y2) {
 		SetPixel(x1, y1, color);
@@ -142,74 +317,18 @@ void MoRenderer::DrawLine(int x1, int y1, int x2, int y2, const Vec4f& color) co
 	}
 }
 
-bool MoRenderer::DrawTriangle() {
-	if (color_buffer_ == nullptr || vertex_shader_ == nullptr) return false;
+void MoRenderer::DrawTriangle() {
+	if (color_buffer_ == nullptr || vertex_shader_ == nullptr) return;
 
-	// 三角形屏幕空间中的外接矩形
-	Vec2i bounding_min(0), bounding_max(0);
-	Vertex* vertex[3] = { &vertex_[0], &vertex_[1], &vertex_[2] };
-
-	// 顶点数据初始化
+	// 顶点变换
 	for (int k = 0; k < 3; k++) {
-		auto& [context, w_reciprocal, position, screen_position_f, screen_position_i] = *vertex[k];
-
-		// 清空上下文 varying 列表
-		context.varying_float.clear();
-		context.varying_vec2f.clear();
-		context.varying_vec3f.clear();
-		context.varying_vec4f.clear();
-
 		// 执行顶点着色程序，返回裁剪空间中的顶点坐标，此时没有进行透视除法
-		position = vertex_shader_(k, context);
-
-		// 裁剪clip：三角形的任何一个顶点超过CVV就直接剔除
-		float w = position.w;
-		//if (w == 0.0f) return false;
-		//if (position.z < -w || position.z > w) return false;
-		//if (position.x < -w || position.x > w) return false;
-		//if (position.y < -w || position.y > w) return false;
-
-		// 透视除法
-		w_reciprocal = 1.0f / w;
-		position *= w_reciprocal;
-
-		// 屏幕映射：计算屏幕坐标（窗口坐标。详见RTR4 章节2.3.4
-		screen_position_f.x = (position.x + 1.0f) * static_cast<float>(frame_buffer_width_) * 0.5f;
-		screen_position_f.y = (position.y + 1.0f) * static_cast<float>(frame_buffer_height_) * 0.5f;
-
-		// 计算整数屏幕坐标：d = floor(c)
-		screen_position_i.x = static_cast<int>(floor(screen_position_f.x));
-		screen_position_i.y = static_cast<int>(floor(screen_position_f.y));
-
-		//计算整数屏幕坐标：c = d + 0.5
-		screen_position_f.x = screen_position_i.x + 0.5f;
-		screen_position_f.y = screen_position_i.y + 0.5f;
-
-		// 更新外接矩形
-		if (k == 0) {
-			bounding_min.x = bounding_max.x = Between(0, frame_buffer_width_ - 1, screen_position_i.x);
-			bounding_min.y = bounding_max.y = Between(0, frame_buffer_height_ - 1, screen_position_i.y);
-		}
-		else {
-			bounding_min.x = Between(0, frame_buffer_width_ - 1, Min(bounding_min.x, screen_position_i.x));
-			bounding_max.x = Between(0, frame_buffer_width_ - 1, Max(bounding_max.x, screen_position_i.x));
-			bounding_min.y = Between(0, frame_buffer_height_ - 1, Min(bounding_min.y, screen_position_i.y));
-			bounding_max.y = Between(0, frame_buffer_height_ - 1, Max(bounding_max.y, screen_position_i.y));
-		}
-	}
-
-
-	// 只绘制线框，不绘制像素，直接退出
-	if (render_frame_ && !render_pixel_) {
-		DrawLine(vertex[0]->screen_position_i.x, vertex[0]->screen_position_i.y, vertex[1]->screen_position_i.x, vertex[1]->screen_position_i.y);
-		DrawLine(vertex[0]->screen_position_i.x, vertex[0]->screen_position_i.y, vertex[2]->screen_position_i.x, vertex[2]->screen_position_i.y);
-		DrawLine(vertex[2]->screen_position_i.x, vertex[2]->screen_position_i.y, vertex[1]->screen_position_i.x, vertex[1]->screen_position_i.y);
-
-		return false;
+		vertex_[k].position = vertex_shader_(k, vertex_[k].context);
+		vertex_[k].has_transformed = false;
 	}
 
 	/*
-	* 裁剪空间，背面剔除：
+	* 裁剪空间中的背面剔除：
 	*
 	* 在观察空间中进行判断，观察空间使用右手坐标系，即相机看向z轴负方向
 	* 判断三角形朝向，剔除背对相机的三角形
@@ -218,24 +337,90 @@ bool MoRenderer::DrawTriangle() {
 	* 顶点顺序：
 	* obj格式中默认的顶点顺序是逆时针，即顶点v1，v2，v3按照逆时针顺序排列
 	*/
-	Vec4f vector_01 = vertex[1]->position - vertex[0]->position;
-	Vec4f vector_02 = vertex[2]->position - vertex[0]->position;
-	Vec4f normal = vector_cross(vector_01, vector_02);
-	if (normal.z <= 0) return false;
+	const Vec4f vector_01 = vertex_[1].position - vertex_[0].position;
+	const Vec4f vector_02 = vertex_[2].position - vertex_[0].position;
+	const Vec4f normal = vector_cross(vector_01, vector_02);
+	if (normal.z <= 0) return;
+
+	// 在裁剪空间中，针对近裁剪平面进行clip
+	const int out_vertex_count = ClipWithPlane(Z_Near, vertex_);
+
+	for (int i = 0; i < out_vertex_count - 2; i++)
+	{
+		Vertex clip_vertex[3] = { clip_vertex_[0], clip_vertex_[i + 1], clip_vertex_[i + 2] };
+
+		// 执行后续顶点处理
+		for (int k = 0; k < 3; k++) {
+			auto& [has_transformed, context, w_reciprocal, position, screen_position_f, screen_position_i] = clip_vertex[k];
+
+			if (has_transformed)continue;
+
+			has_transformed = true;
+
+			// 透视除法
+			w_reciprocal = 1.0f / position.w;
+			position *= w_reciprocal;
+
+			// 屏幕映射：计算屏幕坐标（窗口坐标。详见RTR4 章节2.3.4
+			screen_position_f.x = (position.x + 1.0f) * static_cast<float>(frame_buffer_width_) * 0.5f;
+			screen_position_f.y = (position.y + 1.0f) * static_cast<float>(frame_buffer_height_) * 0.5f;
+
+			// 计算整数屏幕坐标：d = floor(c)
+			screen_position_i.x = static_cast<int>(floor(screen_position_f.x));
+			screen_position_i.y = static_cast<int>(floor(screen_position_f.y));
+
+			//计算整数屏幕坐标：c = d + 0.5
+			screen_position_f.x = screen_position_i.x + 0.5f;
+			screen_position_f.y = screen_position_i.y + 0.5f;
+		}
+
+		RasterizeTriangle(clip_vertex);
+	}
+}
+
+void MoRenderer::RasterizeTriangle(Vertex vertex[3]) const
+{
+	// 三角形屏幕空间中的外接矩形
+	Vec2i bounding_min(100000, 100000), bounding_max(-100000, -100000);
+
+	// 寻找外界矩形范围
+	for (size_t i = 0; i < 3; i++)
+	{
+		Vec2i screen_position_i = vertex[i].screen_position_i;
+
+		// 更新外接矩形
+		bounding_min.x = Min(bounding_min.x, screen_position_i.x);
+		bounding_max.x = Max(bounding_max.x, screen_position_i.x);
+		bounding_min.y = Min(bounding_min.y, screen_position_i.y);
+		bounding_max.y = Max(bounding_max.y, screen_position_i.y);
+	}
+
+	if (bounding_min.x >= bounding_max.x || bounding_min.y >= bounding_max.y) return;
+	bounding_min.x = Between(0, frame_buffer_width_ - 1, bounding_min.x);
+	bounding_max.x = Between(0, frame_buffer_width_ - 1, bounding_max.x);
+	bounding_min.y = Between(0, frame_buffer_height_ - 1, bounding_min.y);
+	bounding_max.y = Between(0, frame_buffer_height_ - 1, bounding_max.y);
+
+
+	// 只绘制线框，不绘制像素，直接退出
+	if (render_frame_ && !render_pixel_) {
+		DrawWireFrame(vertex);
+
+		return;
+	}
 
 	// 保存三个端点位置
-	Vec2f p0 = vertex[0]->screen_position_f;
-	Vec2f p1 = vertex[1]->screen_position_f;
-	Vec2f p2 = vertex[2]->screen_position_f;
+	Vec2f p0 = vertex[0].screen_position_f;
+	Vec2f p1 = vertex[1].screen_position_f;
+	Vec2f p2 = vertex[2].screen_position_f;
 
 	// 构建边缘方程
 	Vec2f bottom_left_point = { static_cast<float>(bounding_min.x) + 0.5f,static_cast<float>(bounding_min.y) + 0.5f };
-	auto* edge_equation_0 = new EdgeEquation(p1, p2, bottom_left_point, vertex[0]->w_reciprocal);
-	auto* edge_equation_1 = new EdgeEquation(p2, p0, bottom_left_point, vertex[1]->w_reciprocal);
-	auto* edge_equation_2 = new EdgeEquation(p0, p1, bottom_left_point, vertex[2]->w_reciprocal);
+	auto* edge_equation_0 = new EdgeEquation(p1, p2, bottom_left_point, vertex[0].w_reciprocal);
+	auto* edge_equation_1 = new EdgeEquation(p2, p0, bottom_left_point, vertex[1].w_reciprocal);
+	auto* edge_equation_2 = new EdgeEquation(p0, p1, bottom_left_point, vertex[2].w_reciprocal);
 
-
-	// 迭代三角形外接矩形的所有点
+	// 迭代三角形外接矩形中的所有点
 	for (int y = bounding_min.y; y <= bounding_max.y; y++) {
 		for (int x = bounding_min.x; x <= bounding_max.x; x++) {
 			Vec2i offset = { x - bounding_min.x, y - bounding_min.y };
@@ -272,53 +457,55 @@ bool MoRenderer::DrawTriangle() {
 
 			// 对深度进行插值，进行深度测试，使用反向z-buffer
 			float depth =
-				vertex[0]->position.z * bc_p0 +
-				vertex[1]->position.z * bc_p1 +
-				vertex[2]->position.z * bc_p2;
+				vertex[0].position.z * bc_p0 +
+				vertex[1].position.z * bc_p1 +
+				vertex[2].position.z * bc_p2;
+
 			if (1 - depth < depth_buffer_[y][x]) continue;
 			depth_buffer_[y][x] = 1 - depth;
 
 
 			// 准备为当前像素的各项 varying 进行插值
-			ShaderContext attribute_current_vertex;
+			auto* attribute_current_vertex = new ShaderContext();
 
-			ShaderContext& context_p0 = vertex[0]->context;
-			ShaderContext& context_p1 = vertex[1]->context;
-			ShaderContext& context_p2 = vertex[2]->context;
+			ShaderContext& context_p0 = vertex[0].context;
+			ShaderContext& context_p1 = vertex[1].context;
+			ShaderContext& context_p2 = vertex[2].context;
 
 			// 插值各项 varying
 			for (const auto& key : context_p0.varying_float | std::views::keys) {
 				float f0 = context_p0.varying_float[key];
 				float f1 = context_p1.varying_float[key];
 				float f2 = context_p2.varying_float[key];
-				attribute_current_vertex.varying_float[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
+				attribute_current_vertex->varying_float[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
 			}
 
 			for (const auto& key : context_p0.varying_vec2f | std::views::keys) {
 				const Vec2f& f0 = context_p0.varying_vec2f[key];
 				const Vec2f& f1 = context_p1.varying_vec2f[key];
 				const Vec2f& f2 = context_p2.varying_vec2f[key];
-				attribute_current_vertex.varying_vec2f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
+				attribute_current_vertex->varying_vec2f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
 			}
 
 			for (const auto& key : context_p0.varying_vec3f | std::views::keys) {
 				const Vec3f& f0 = context_p0.varying_vec3f[key];
 				const Vec3f& f1 = context_p1.varying_vec3f[key];
 				const Vec3f& f2 = context_p2.varying_vec3f[key];
-				attribute_current_vertex.varying_vec3f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
+				attribute_current_vertex->varying_vec3f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
 			}
 
 			for (const auto& key : context_p0.varying_vec4f | std::views::keys) {
 				const Vec4f& f0 = context_p0.varying_vec4f[key];
 				const Vec4f& f1 = context_p1.varying_vec4f[key];
 				const Vec4f& f2 = context_p2.varying_vec4f[key];
-				attribute_current_vertex.varying_vec4f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
+				attribute_current_vertex->varying_vec4f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
 			}
 
 			// 执行像素着色器
-			Vec4f color = { 0.0f, 0.0f, 0.0f, 0.0f };
+			Vec4f color = { 1.0f };
 			if (pixel_shader_ != nullptr) {
-				color = pixel_shader_(attribute_current_vertex);
+				color = pixel_shader_(*attribute_current_vertex);
+				delete attribute_current_vertex;
 			}
 			SetPixel(x, y, color);
 		}
@@ -326,11 +513,6 @@ bool MoRenderer::DrawTriangle() {
 
 	// 绘制线框，再画一次避免覆盖
 	if (render_frame_) {
-		DrawLine(vertex[0]->screen_position_i.x, vertex[0]->screen_position_i.y, vertex[1]->screen_position_i.x, vertex[1]->screen_position_i.y);
-		DrawLine(vertex[0]->screen_position_i.x, vertex[0]->screen_position_i.y, vertex[2]->screen_position_i.x, vertex[2]->screen_position_i.y);
-		DrawLine(vertex[2]->screen_position_i.x, vertex[2]->screen_position_i.y, vertex[1]->screen_position_i.x, vertex[1]->screen_position_i.y);
+		DrawWireFrame(vertex);
 	}
-
-	return true;
 }
-

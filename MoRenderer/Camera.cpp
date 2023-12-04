@@ -3,8 +3,11 @@
 Camera::Camera(const Vec3f& position, const Vec3f& target, const Vec3f& up, float fov, float aspect) :
 	position_(position), target_(target), up_(up), fov_(fov), aspect_(aspect)
 {
-	near_plane_ = 0.01f;
+	near_plane_ = 1.0f;
 	far_plane_ = 20.0f;
+
+	origin_position_ = position_;
+	origin_target_ = target_;
 
 	window_ = Window::GetInstance();
 }
@@ -119,6 +122,11 @@ void Camera::HandleKeyEvents()
 	{
 		position_ += 0.05f * axis_r_;
 		target_ += 0.05f * axis_r_;
+	}
+	if (window_->keys_[VK_SPACE])
+	{
+		position_ = origin_position_;
+		target_ = origin_target_;
 	}
 	if (window_->keys_[VK_ESCAPE])
 	{
