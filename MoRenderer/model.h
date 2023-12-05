@@ -1,10 +1,10 @@
 #ifndef MODEL_H
 #define MODEL_H
 
-#include "math.h"
-#include "Texture.h"
 #include <vector>
 
+#include "math.h"
+#include "Texture.h"
 
 struct Attributes {
 	Vec3f position_os;
@@ -15,11 +15,12 @@ struct Attributes {
 
 enum TextureType
 {
-	BASE_COLOR,
-	NORMAL,
-	ROUGHNESS,
-	METALLIC,
-	AMBIENT_OCCLUSION,
+	kTextureTypeBaseColor,
+	kTextureTypeNormal,
+	kTextureTypeRoughness,
+	kTextureTypeMetallic,
+	kTextureTypeOcclusion,
+	kTextureTypeEmission
 };
 
 class Model {
@@ -43,7 +44,8 @@ public:
 	Texture* normal_map_;
 	Texture* roughness_map_;
 	Texture* metallic_map_;
-	Texture* ambient_occlusion_map_;
+	Texture* occlusion_map_;
+	Texture* emission_map_;
 };
 
 

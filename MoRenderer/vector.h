@@ -300,6 +300,12 @@ inline Vector<4, T> vector_cross(const Vector<4, T>& a, const Vector<4, T>& b) {
 	return Vector<4, T>(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x, a.w);
 }
 
+// 计算反射向量
+template<typename T>
+inline Vector<3, T> vector_reflect(const Vector<3, T>& v, const Vector<3, T>& n) {
+	return 2.0f* vector_dot(v, n) * n - v;
+}
+
 // = a + (b - a) * t
 template<size_t N, typename T>
 inline Vector<N, T> vector_lerp(const Vector<N, T>& a, const Vector<N, T>& b, float t) {

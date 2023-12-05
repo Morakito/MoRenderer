@@ -60,7 +60,7 @@ public:
 	// 顶点结构体
 	struct Vertex {
 		bool has_transformed;			// 是否已经完成了顶点变换
-		ShaderContext context;			// 上下文
+		Varings context;			// 上下文
 		float w_reciprocal;				// w 的倒数
 		Vec4f position;					// 裁剪空间坐标	范围[-1,1]
 		Vec2f screen_position_f;		// 屏幕坐标		范围x~[0.5, frame_buffer_width_+ 0.5] y~[0.5, frame_buffer_height_+ 0.5]

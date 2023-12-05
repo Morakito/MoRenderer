@@ -212,10 +212,10 @@ MoRenderer::Vertex& MoRenderer::VertexLerp(Vertex& vertex_p0, Vertex& vertex_p1,
 {
 	auto* vertex = new Vertex();
 	vertex->position = vector_lerp(vertex_p0.position, vertex_p1.position, ratio);
-	ShaderContext& context = vertex->context;
+	Varings& context = vertex->context;
 
-	ShaderContext& context_p0 = vertex_p0.context;
-	ShaderContext& context_p1 = vertex_p1.context;
+	Varings& context_p0 = vertex_p0.context;
+	Varings& context_p1 = vertex_p1.context;
 
 	for (const auto& key : context_p0.varying_float | std::views::keys) {
 		float f0 = context_p0.varying_float[key];
@@ -466,11 +466,11 @@ void MoRenderer::RasterizeTriangle(Vertex vertex[3]) const
 
 
 			// 准备为当前像素的各项 varying 进行插值
-			auto* attribute_current_vertex = new ShaderContext();
+			auto* attribute_current_vertex = new Varings();
 
-			ShaderContext& context_p0 = vertex[0].context;
-			ShaderContext& context_p1 = vertex[1].context;
-			ShaderContext& context_p2 = vertex[2].context;
+			Varings& context_p0 = vertex[0].context;
+			Varings& context_p1 = vertex[1].context;
+			Varings& context_p2 = vertex[2].context;
 
 			// 插值各项 varying
 			for (const auto& key : context_p0.varying_float | std::views::keys) {

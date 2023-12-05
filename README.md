@@ -34,14 +34,17 @@ MoRenderer is a software rasterization renderer based on c++11. The main purpose
 -   tangent space normal mapping
 -   shading model
     -   Blinn-Phong shading
+    -   Physically Based Shading (use Cook-torrance BRDF)
+-   material inspector
+    -   use keyboard number to switch material inspector
+    -   Blinn-Phong material inspector
+    -   Physically Based Shading material inspector
 
 
 ## ToDo List
 
 -   image-based lighting (IBL)
--   PBR shading
 -   tone mapping
--   material inspector
 
 ## Build
 
@@ -56,12 +59,18 @@ cmake -G "Visual Studio 17 2022" ..
 start Renderer.sln
 ```
 
-## Camera Control
+## Control
+### Camera Control
 -   Orbit: left mouse button
 -   Pan: right mouse button
 -   Zoom: mouse wheel \ Q E
 -   move model: W A S D
--   Reset: Space
+-   Reset Camera: Space
+
+### Material Inspector Control
+-   Blinn-Phong shading: keyboard 0-7
+-   Physically Based Shading: keyboard 0-8
+
 ## Reference
 
 [stb_image.h](https://github.com/nothings/stb "stb_image")

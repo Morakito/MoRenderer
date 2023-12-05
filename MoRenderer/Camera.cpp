@@ -3,7 +3,7 @@
 Camera::Camera(const Vec3f& position, const Vec3f& target, const Vec3f& up, float fov, float aspect) :
 	position_(position), target_(target), up_(up), fov_(fov), aspect_(aspect)
 {
-	near_plane_ = 1.0f;
+	near_plane_ = 0.7f;
 	far_plane_ = 20.0f;
 
 	origin_position_ = position_;

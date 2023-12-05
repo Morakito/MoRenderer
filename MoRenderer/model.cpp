@@ -73,7 +73,7 @@ Model::Model(const std::string file_path, const std::string file_name, const std
 					float u = attributes.texcoords[2 * index.texcoord_index + 0];
 					float v = attributes.texcoords[2 * index.texcoord_index + 1];
 					v = 1.0f - fmod(v, 1.0f);
-					attribute.texcoord = {u,v};
+					attribute.texcoord = { u,v };
 
 					attribute.normal_os = {
 						attributes.normals[3 * index.normal_index + 0],
@@ -93,11 +93,12 @@ Model::Model(const std::string file_path, const std::string file_name, const std
 
 	// º”‘ÿŒ∆¿Ì
 	{
-		base_color_map_ = new Texture(GetTextureFileName(file_path, file_name, BASE_COLOR, texture_format));
-		normal_map_ = new Texture(GetTextureFileName(file_path, file_name, NORMAL, texture_format));
-		roughness_map_ = new Texture(GetTextureFileName(file_path, file_name, ROUGHNESS, texture_format));
-		metallic_map_ = new Texture(GetTextureFileName(file_path, file_name, METALLIC, texture_format));
-		ambient_occlusion_map_ = new Texture(GetTextureFileName(file_path, file_name, AMBIENT_OCCLUSION, texture_format));
+		base_color_map_ = new Texture(GetTextureFileName(file_path, file_name, kTextureTypeBaseColor, texture_format));
+		normal_map_ = new Texture(GetTextureFileName(file_path, file_name, kTextureTypeNormal, texture_format));
+		roughness_map_ = new Texture(GetTextureFileName(file_path, file_name, kTextureTypeRoughness, texture_format));
+		metallic_map_ = new Texture(GetTextureFileName(file_path, file_name, kTextureTypeMetallic, texture_format));
+		occlusion_map_ = new Texture(GetTextureFileName(file_path, file_name, kTextureTypeOcclusion, texture_format));
+		emission_map_ = new Texture(GetTextureFileName(file_path, file_name, kTextureTypeEmission, texture_format));
 	}
 }
 
@@ -109,7 +110,8 @@ Model::~Model()
 	delete normal_map_;
 	delete roughness_map_;
 	delete metallic_map_;
-	delete ambient_occlusion_map_;
+	delete occlusion_map_;
+	delete emission_map_;
 
 	attributes_.clear();
 }
@@ -119,13 +121,14 @@ std::string Model::GetTextureType(const TextureType texture_type)
 
 	switch (texture_type)
 	{
-	case BASE_COLOR:			return "basecolor";
-	case NORMAL:				return "normal";
-	case ROUGHNESS:				return "roughness";
-	case METALLIC:				return "metallic";
-	case AMBIENT_OCCLUSION:		return "ambient_occlusion";
+	case kTextureTypeBaseColor:		return "basecolor";
+	case kTextureTypeNormal:			return "normal";
+	case kTextureTypeRoughness:			return "roughness";
+	case kTextureTypeMetallic:			return "metallic";
+	case kTextureTypeOcclusion:			return "occlusion";
+	case kTextureTypeEmission:			return "emission";
 
-	default:					return "unknown";
+	default:				return "unknown";
 	}
 }
 

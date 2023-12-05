@@ -99,7 +99,7 @@ void Window::WindowDestroy()
 	free(window_);
 }
 
-void Window::WindowDisplay(const uint8_t* frame_buffer) 
+void Window::WindowDisplay(const uint8_t* frame_buffer)
 {
 	UpdateFpsData();
 	WindowDrawFrame(frame_buffer);
@@ -238,6 +238,11 @@ Vec2f Window::GetMousePosition() const
 void Window::SetLogMessage(const std::string& log_type, const std::string& log_content)
 {
 	log_messages_[log_type] = log_content;
+}
+
+void Window::RemoveLogMessage(const std::string& log_type)
+{
+	log_messages_.erase(log_type);
 }
 
 

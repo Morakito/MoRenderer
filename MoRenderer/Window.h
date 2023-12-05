@@ -29,6 +29,7 @@ public:
 
 	Vec2f GetMousePosition() const;
 	void SetLogMessage(const std::string&, const std::string&);
+	void RemoveLogMessage(const std::string& log_type);
 
 private:
 
@@ -51,7 +52,6 @@ public:
 	char mouse_buttons_[3];				// 0-鼠标左键，1-鼠标右键，2-鼠标滚轮	
 	bool is_close_;						// 窗口是否关闭
 	Mouse mouse_info_;					// 鼠标信息
-
 
 private:
 	HWND hwnd_;
