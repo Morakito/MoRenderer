@@ -312,6 +312,14 @@ inline Vector<N, T> vector_lerp(const Vector<N, T>& a, const Vector<N, T>& b, fl
 	return a + (b - a) * t;
 }
 
+// 各个元素取绝对值
+template<size_t N, typename T>
+inline Vector<N, T> vector_abs(const Vector<N, T>& a) {
+	Vector<N, T> c;
+	for (size_t i = 0; i < N; i++) c[i] = std::abs(a[i]);
+	return c;
+}
+
 // 各个元素取最大值
 template<size_t N, typename T>
 inline Vector<N, T> vector_max(const Vector<N, T>& a, const Vector<N, T>& b) {

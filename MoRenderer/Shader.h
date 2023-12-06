@@ -8,7 +8,6 @@
 #include "model.h"
 #include "Window.h"
 
-class Window;
 
 struct UniformBuffer
 {
@@ -188,6 +187,35 @@ public:
 
 	MaterialInspector material_inspector_;
 	Vec3f dielectric_f0_;
+};
+
+
+class SkyBoxShader final :public IShader
+{
+public:
+	SkyBoxShader()
+	{
+		
+	}
+
+	Vec4f VertexShaderFunction(int index, Varings& output) const override;
+	Vec4f PixelShaderFunction(Varings& input) const override;
+	void HandleKeyEvents() override {};
+
+	enum VaryingAttributes
+	{
+		VARYING_POSITION_WS = 0,		// 世界空间坐标
+	};
+
+public:
+	CubeMap* cubemap_;
+
+	std::vector<Vec3f> plane_vertex_ = {
+		{0.5f,0.5f,0.5f},			// 右上角
+		{-0.5f,0.5f,0.5f},			// 左上角
+		{-0.5f,-0.5f,0.5f},		// 左下角
+		{0.5f,-0.5f,0.5f} };		// 右下角
+	std::vector<int> plane_index_ = { 0,1,2,     0,2,3 };
 };
 
 #endif // !SHADER_H

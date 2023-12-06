@@ -38,7 +38,7 @@ static Vec4f calculate_tangent(Attributes* attribute[3], int index)
 	return  t.xyz1();
 }
 
-Model::Model(const std::string file_path, const std::string file_name, const std::string texture_format)
+Model::Model(const std::string& file_path, const std::string& file_name, const std::string& texture_format)
 {
 	// ¼ÓÔØOBJÄ£ÐÍ
 	{
@@ -102,6 +102,18 @@ Model::Model(const std::string file_path, const std::string file_name, const std
 	}
 }
 
+Model::Model(std::vector<Vec3f>& vertex, const std::vector<int>& index)
+{
+	for (int i : index)
+	{
+		Attributes attribute{};
+		attribute.position_os = {
+			vertex[i]
+		};
+		attributes_.push_back(attribute);
+	}
+}
+
 
 
 Model::~Model()
@@ -113,6 +125,7 @@ Model::~Model()
 	delete occlusion_map_;
 	delete emission_map_;
 
+
 	attributes_.clear();
 }
 
@@ -121,14 +134,14 @@ std::string Model::GetTextureType(const TextureType texture_type)
 
 	switch (texture_type)
 	{
-	case kTextureTypeBaseColor:		return "basecolor";
+	case kTextureTypeBaseColor:			return "basecolor";
 	case kTextureTypeNormal:			return "normal";
 	case kTextureTypeRoughness:			return "roughness";
 	case kTextureTypeMetallic:			return "metallic";
 	case kTextureTypeOcclusion:			return "occlusion";
 	case kTextureTypeEmission:			return "emission";
 
-	default:				return "unknown";
+	default:							return "unknown";
 	}
 }
 

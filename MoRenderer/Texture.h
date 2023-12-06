@@ -3,6 +3,7 @@
 
 #include "math.h"
 
+// 单张纹理贴图
 class Texture
 {
 public:
@@ -11,9 +12,7 @@ public:
 
 	// 纹理采样
 	Vec4f Sample2D(float u, float v) const;
-
-	Vec4f Sample2D( Vec2f uv) const;
-
+	Vec4f Sample2D(Vec2f uv) const;
 
 private:
 
@@ -28,6 +27,27 @@ public:
 
 	bool has_data_;						// 是否存在数据，即是否成功加载贴图
 	unsigned char* texture_data_;		// 实际的图像数据
+};
+
+// 立方体贴图，用于天空盒
+class CubeMap
+{
+public:
+	CubeMap(const std::string& file_folder);
+	~CubeMap();
+
+	struct CubeMapUV
+	{
+		int face_id;
+		Vec2f uv;
+	};
+
+	Vec3f Sample(Vec3f& direction) const;
+
+	static CubeMapUV& CalculateCubeMapUV(Vec3f& direction);
+
+public:
+	Texture* cubemap_[6];
 };
 
 

@@ -254,12 +254,6 @@ void MoRenderer::DrawWireFrame(Vertex vertex[3]) const
 
 void MoRenderer::DrawLine(int x1, int y1, int x2, int y2, const Vec4f& color) const
 {
-
-	x1 = Between(0, frame_buffer_width_ - 1, x1);
-	x2 = Between(0, frame_buffer_width_ - 1, x2);
-	y1 = Between(0, frame_buffer_height_ - 1, y1);
-	y2 = Between(0, frame_buffer_height_ - 1, y2);
-
 	int x, y;
 	if (x1 == x2 && y1 == y2) {
 		SetPixel(x1, y1, color);
@@ -317,7 +311,56 @@ void MoRenderer::DrawLine(int x1, int y1, int x2, int y2, const Vec4f& color) co
 	}
 }
 
-void MoRenderer::DrawTriangle() {
+void MoRenderer::DrawSkybox()
+{
+	if (color_buffer_ == nullptr || vertex_shader_ == nullptr) return;
+
+	// 顶点变换
+	for (int k = 0; k < 3; k++) {
+		vertex_[k].context.varying_float.clear();
+		vertex_[k].context.varying_vec2f.clear();
+		vertex_[k].context.varying_vec3f.clear();
+		vertex_[k].context.varying_vec4f.clear();
+
+		// 执行顶点着色程序，返回裁剪空间中的顶点坐标，此时没有进行透视除法
+		vertex_[k].position = vertex_shader_(k, vertex_[k].context);
+	}
+
+	Vertex clip_vertex[3] = { vertex_[0], vertex_[1], vertex_[2] };
+
+	// 执行后续顶点处理
+	for (int k = 0; k < 3; k++) {
+		auto& [has_transformed, context, w_reciprocal, position, screen_position_f, screen_position_i] = clip_vertex[k];
+
+		if (has_transformed)return;
+		has_transformed = true;
+
+		// 透视除法
+		if (NearEqual(position.w, 0.0f, kEpsilon))
+		{
+			position.w = position.w > 0 ? kEpsilon : -kEpsilon;
+		}
+
+		w_reciprocal = 1.0f / position.w;
+		position *= w_reciprocal;
+
+		// 屏幕映射：计算屏幕坐标（窗口坐标。详见RTR4 章节2.3.4
+		screen_position_f.x = (position.x + 1.0f) * static_cast<float>(frame_buffer_width_ - 1) * 0.5f;
+		screen_position_f.y = (position.y + 1.0f) * static_cast<float>(frame_buffer_height_ - 1) * 0.5f;
+
+		// 计算整数屏幕坐标：d = floor(c)
+		screen_position_i.x = static_cast<int>(floor(screen_position_f.x));
+		screen_position_i.y = static_cast<int>(floor(screen_position_f.y));
+
+		//计算整数屏幕坐标：c = d + 0.5
+		screen_position_f.x = screen_position_i.x + 0.5f;
+		screen_position_f.y = screen_position_i.y + 0.5f;
+	}
+
+	RasterizeTriangle(clip_vertex);
+}
+
+void MoRenderer::DrawMesh() {
 	if (color_buffer_ == nullptr || vertex_shader_ == nullptr) return;
 
 	// 顶点变换
@@ -354,7 +397,6 @@ void MoRenderer::DrawTriangle() {
 			auto& [has_transformed, context, w_reciprocal, position, screen_position_f, screen_position_i] = clip_vertex[k];
 
 			if (has_transformed)continue;
-
 			has_transformed = true;
 
 			// 透视除法
@@ -362,8 +404,8 @@ void MoRenderer::DrawTriangle() {
 			position *= w_reciprocal;
 
 			// 屏幕映射：计算屏幕坐标（窗口坐标。详见RTR4 章节2.3.4
-			screen_position_f.x = (position.x + 1.0f) * static_cast<float>(frame_buffer_width_) * 0.5f;
-			screen_position_f.y = (position.y + 1.0f) * static_cast<float>(frame_buffer_height_) * 0.5f;
+			screen_position_f.x = (position.x + 1.0f) * static_cast<float>(frame_buffer_width_ - 1) * 0.5f;
+			screen_position_f.y = (position.y + 1.0f) * static_cast<float>(frame_buffer_height_ - 1) * 0.5f;
 
 			// 计算整数屏幕坐标：d = floor(c)
 			screen_position_i.x = static_cast<int>(floor(screen_position_f.x));
@@ -372,13 +414,15 @@ void MoRenderer::DrawTriangle() {
 			//计算整数屏幕坐标：c = d + 0.5
 			screen_position_f.x = screen_position_i.x + 0.5f;
 			screen_position_f.y = screen_position_i.y + 0.5f;
+
 		}
 
 		RasterizeTriangle(clip_vertex);
 	}
+
 }
 
-void MoRenderer::RasterizeTriangle(Vertex vertex[3]) const
+void MoRenderer::RasterizeTriangle(Vertex vertex[3])
 {
 	// 三角形屏幕空间中的外接矩形
 	Vec2i bounding_min(100000, 100000), bounding_max(-100000, -100000);
@@ -387,7 +431,6 @@ void MoRenderer::RasterizeTriangle(Vertex vertex[3]) const
 	for (size_t i = 0; i < 3; i++)
 	{
 		Vec2i screen_position_i = vertex[i].screen_position_i;
-
 		// 更新外接矩形
 		bounding_min.x = Min(bounding_min.x, screen_position_i.x);
 		bounding_max.x = Max(bounding_max.x, screen_position_i.x);
@@ -395,7 +438,6 @@ void MoRenderer::RasterizeTriangle(Vertex vertex[3]) const
 		bounding_max.y = Max(bounding_max.y, screen_position_i.y);
 	}
 
-	if (bounding_min.x >= bounding_max.x || bounding_min.y >= bounding_max.y) return;
 	bounding_min.x = Between(0, frame_buffer_width_ - 1, bounding_min.x);
 	bounding_max.x = Between(0, frame_buffer_width_ - 1, bounding_max.x);
 	bounding_min.y = Between(0, frame_buffer_height_ - 1, bounding_min.y);
@@ -405,20 +447,20 @@ void MoRenderer::RasterizeTriangle(Vertex vertex[3]) const
 	// 只绘制线框，不绘制像素，直接退出
 	if (render_frame_ && !render_pixel_) {
 		DrawWireFrame(vertex);
-
 		return;
 	}
 
 	// 保存三个端点位置
-	Vec2f p0 = vertex[0].screen_position_f;
-	Vec2f p1 = vertex[1].screen_position_f;
-	Vec2f p2 = vertex[2].screen_position_f;
+
+	Vec2f p0 = Vec2f(vertex[0].screen_position_i.x, vertex[0].screen_position_i.y);
+	Vec2f p1 = Vec2f(vertex[1].screen_position_i.x, vertex[1].screen_position_i.y);
+	Vec2f p2 = Vec2f(vertex[2].screen_position_i.x, vertex[2].screen_position_i.y);
 
 	// 构建边缘方程
-	Vec2f bottom_left_point = { static_cast<float>(bounding_min.x) + 0.5f,static_cast<float>(bounding_min.y) + 0.5f };
-	auto* edge_equation_0 = new EdgeEquation(p1, p2, bottom_left_point, vertex[0].w_reciprocal);
-	auto* edge_equation_1 = new EdgeEquation(p2, p0, bottom_left_point, vertex[1].w_reciprocal);
-	auto* edge_equation_2 = new EdgeEquation(p0, p1, bottom_left_point, vertex[2].w_reciprocal);
+	Vec2f bottom_left_point = { static_cast<float>(bounding_min.x) ,static_cast<float>(bounding_min.y) };
+	edge_equation_[0].Initialize(p1, p2, bottom_left_point, vertex[0].w_reciprocal);
+	edge_equation_[1].Initialize(p2, p0, bottom_left_point, vertex[1].w_reciprocal);
+	edge_equation_[2].Initialize(p0, p1, bottom_left_point, vertex[2].w_reciprocal);
 
 	// 迭代三角形外接矩形中的所有点
 	for (int y = bounding_min.y; y <= bounding_max.y; y++) {
@@ -427,14 +469,14 @@ void MoRenderer::RasterizeTriangle(Vertex vertex[3]) const
 
 			// 判断点(x,y)是否位于三角形内部或者三角形边缘
 			// 当属于上边缘或者左边缘的时候，将e与1进行比较，从而跳过e=0的情况
-			float e0 = edge_equation_0->Evaluate(offset.x, offset.y);
-			if (e0 < (edge_equation_0->is_top_left ? 0 : 1)) continue;
+			float e0 = edge_equation_[0].Evaluate(offset.x, offset.y);
+			if (e0 < (edge_equation_[0].is_top_left ? 0 : 1)) continue;
 
-			float e1 = edge_equation_1->Evaluate(offset.x, offset.y);
-			if (e1 < (edge_equation_1->is_top_left ? 0 : 1)) continue;
+			float e1 = edge_equation_[1].Evaluate(offset.x, offset.y);
+			if (e1 < (edge_equation_[1].is_top_left ? 0 : 1)) continue;
 
-			float e2 = edge_equation_2->Evaluate(offset.x, offset.y);
-			if (e2 < (edge_equation_2->is_top_left ? 0 : 1)) continue;
+			float e2 = edge_equation_[2].Evaluate(offset.x, offset.y);
+			if (e2 < (edge_equation_[2].is_top_left ? 0 : 1)) continue;
 
 			// 计算重心坐标
 			float bc_denominator = e0 + e1 + e2;
@@ -446,14 +488,15 @@ void MoRenderer::RasterizeTriangle(Vertex vertex[3]) const
 
 			// 计算透视正确的重心坐标
 			float bc_correct_denominator =
-				e0 * edge_equation_0->w_reciprocal +
-				e1 * edge_equation_1->w_reciprocal +
-				e2 * edge_equation_2->w_reciprocal;
+				e0 * edge_equation_[0].w_reciprocal +
+				e1 * edge_equation_[1].w_reciprocal +
+				e2 * edge_equation_[2].w_reciprocal;
 			bc_correct_denominator = 1.0f / bc_correct_denominator;
 
-			float bc_correct_p0 = e0 * edge_equation_0->w_reciprocal * bc_correct_denominator;
-			float bc_correct_p1 = e1 * edge_equation_1->w_reciprocal * bc_correct_denominator;
-			float bc_correct_p2 = e2 * edge_equation_2->w_reciprocal * bc_correct_denominator;
+			float bc_correct_p0 = e0 * edge_equation_[0].w_reciprocal * bc_correct_denominator;
+			float bc_correct_p1 = e1 * edge_equation_[1].w_reciprocal * bc_correct_denominator;
+			float bc_correct_p2 = e2 * edge_equation_[2].w_reciprocal * bc_correct_denominator;
+
 
 			// 对深度进行插值，进行深度测试，使用反向z-buffer
 			float depth =
@@ -461,12 +504,10 @@ void MoRenderer::RasterizeTriangle(Vertex vertex[3]) const
 				vertex[1].position.z * bc_p1 +
 				vertex[2].position.z * bc_p2;
 
-			if (1 - depth < depth_buffer_[y][x]) continue;
-			depth_buffer_[y][x] = 1 - depth;
-
+			if (1.0f - depth <= depth_buffer_[y][x]) continue;
+			depth_buffer_[y][x] = 1.0f - depth;
 
 			// 准备为当前像素的各项 varying 进行插值
-			auto* attribute_current_vertex = new Varings();
 
 			Varings& context_p0 = vertex[0].context;
 			Varings& context_p1 = vertex[1].context;
@@ -477,35 +518,34 @@ void MoRenderer::RasterizeTriangle(Vertex vertex[3]) const
 				float f0 = context_p0.varying_float[key];
 				float f1 = context_p1.varying_float[key];
 				float f2 = context_p2.varying_float[key];
-				attribute_current_vertex->varying_float[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
+				current_varings_.varying_float[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
 			}
 
 			for (const auto& key : context_p0.varying_vec2f | std::views::keys) {
 				const Vec2f& f0 = context_p0.varying_vec2f[key];
 				const Vec2f& f1 = context_p1.varying_vec2f[key];
 				const Vec2f& f2 = context_p2.varying_vec2f[key];
-				attribute_current_vertex->varying_vec2f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
+				current_varings_.varying_vec2f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
 			}
 
 			for (const auto& key : context_p0.varying_vec3f | std::views::keys) {
 				const Vec3f& f0 = context_p0.varying_vec3f[key];
 				const Vec3f& f1 = context_p1.varying_vec3f[key];
 				const Vec3f& f2 = context_p2.varying_vec3f[key];
-				attribute_current_vertex->varying_vec3f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
+				current_varings_.varying_vec3f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
 			}
 
 			for (const auto& key : context_p0.varying_vec4f | std::views::keys) {
 				const Vec4f& f0 = context_p0.varying_vec4f[key];
 				const Vec4f& f1 = context_p1.varying_vec4f[key];
 				const Vec4f& f2 = context_p2.varying_vec4f[key];
-				attribute_current_vertex->varying_vec4f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
+				current_varings_.varying_vec4f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
 			}
 
 			// 执行像素着色器
 			Vec4f color = { 1.0f };
 			if (pixel_shader_ != nullptr) {
-				color = pixel_shader_(*attribute_current_vertex);
-				delete attribute_current_vertex;
+				color = pixel_shader_(current_varings_);
 			}
 			SetPixel(x, y, color);
 		}

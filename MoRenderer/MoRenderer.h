@@ -70,6 +70,8 @@ public:
 			has_transformed = false;
 		}
 
+		~Vertex() = default;
+
 	};
 
 	static Vertex& VertexLerp(Vertex& vertex_p0, Vertex& vertex_p1, float ratio);
@@ -84,7 +86,7 @@ public:
 
 		float w_reciprocal;	// 对顶点w分量的倒数
 
-		EdgeEquation(const Vec2f& p0, const Vec2f& p1, const Vec2f& bottom_left_point, float w_reciprocal)
+		void Initialize(const Vec2f& p0, const Vec2f& p1, const Vec2f& bottom_left_point, float w_reciprocal)
 		{
 			// 详见RTR4 方程23.2
 			a = -(p1.y - p0.y);
@@ -138,9 +140,12 @@ public:
 	int ClipWithPlane(ClipPlane clip_plane, Vertex vertex[3]);
 
 	// 绘制三角形
-	void DrawTriangle();
+	void DrawSkybox();
+
+	// 绘制三角形
+	void DrawMesh();
 	// 光栅化三角形
-	void RasterizeTriangle(Vertex vertex[3]) const;
+	void RasterizeTriangle(Vertex vertex[3]);
 
 	// 绘制线框
 	void DrawWireFrame(Vertex vertex[3]) const;
@@ -156,14 +161,19 @@ public:
 	Vec4f color_foreground_;		// 前景色：画线时候用
 	Vec4f color_background_;		// 背景色：Clear 时候用
 
-	Vertex vertex_[3];				// 三角形的顶点
-	Vertex clip_vertex_[4];			// 三角形的顶点
-
 	bool render_frame_;				// 是否绘制线框
 	bool render_pixel_;				// 是否填充像素
 
+	// 渲染中使用的临时数据
+	Vertex vertex_[3];				// 三角形的顶点
+	Vertex clip_vertex_[4];			// 三角形的顶点
+	EdgeEquation edge_equation_[3];
+	Varings current_varings_;
+
 	VertexShader vertex_shader_;
 	PixelShader pixel_shader_;
+
+
 };
 
 

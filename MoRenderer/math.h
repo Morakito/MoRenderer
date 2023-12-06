@@ -177,7 +177,7 @@ inline static Mat4x4f matrix_look_at(const Vec3f& camera_position, const Vec3f& 
  *
  *
  */
-inline static Mat4x4f matrix_set_perspective(float fov, const float aspect, float near_plane, float far_plane) {
+inline static Mat4x4f matrix_set_perspective(float fov, const float aspect, const float near_plane, const float far_plane) {
 
 	Mat4x4f m = matrix_set_zero();
 

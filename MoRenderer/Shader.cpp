@@ -98,8 +98,8 @@ void BlinnPhongShader::HandleKeyEvents()
 // 由于镜面微表面的假设，因此half_dir就是微表面的法线，cos(light_dir, half_dir)=cos(view_dir, half_dir)
 Vec3f FresnelSchlickApproximation(const Vec3f& m, const Vec3f& light_dir, const Vec3f& f0)
 {
-	const float h_dot_l = Saturate(vector_dot(m, light_dir));
-	return f0 + (Vec3f(1.0f) - f0) * pow(1 - h_dot_l, 5.0f);
+	const float m_dot_l = Saturate(vector_dot(m, light_dir));
+	return f0 + (Vec3f(1.0f) - f0) * pow(1.0f - m_dot_l, 5.0f);
 }
 
 // GGX法线分布函数，详见RTR4章节9.8中的方程9.41
@@ -111,8 +111,8 @@ float NormalDistributionGGX(const Vec3f& m, const Vec3f& n, const float perceptu
 	const float roughness = perceptual_roughness * perceptual_roughness;
 	const float roughness2 = roughness * roughness;
 
-	const float factor = 1.0f + n_dot_m_2 * (roughness2 - 1);
-	const float D = n_dot_m * n_dot_m_2 / (kPi * factor * factor);
+	const float factor = 1.0f + n_dot_m_2 * (roughness2 - 1.0f);
+	const float D = n_dot_m * roughness2 / (kPi * factor * factor);
 	return D;
 }
 
@@ -121,31 +121,28 @@ float NormalDistributionGGX(const Vec3f& m, const Vec3f& n, const float perceptu
 // 参数中的s可能是view_dir或者light_dir
 float Smith_G1_GGX(const Vec3f& m, const Vec3f& n, const Vec3f& s, const float perceptual_roughness)
 {
-	const float n_dot_m = Saturate(vector_dot(n, m));
+	const float m_dot_s = Saturate(vector_dot(m, s));
 	const float n_dot_s = Saturate(vector_dot(n, s));
 	const float n_dot_s_2 = n_dot_s * n_dot_s;
 
 	const float roughness = perceptual_roughness * perceptual_roughness;
 	const float roughness2 = roughness * roughness;
 
-	const float a2_reciprocal = roughness2 * (1 - n_dot_s_2) / n_dot_s_2;
-	const float lambda = (+sqrtf(1 + a2_reciprocal) - 1.0f) * 0.5f;
+	const float a2_reciprocal = roughness2 * (1 - n_dot_s_2) / (n_dot_s_2 + kEpsilon);
+	const float lambda = (sqrtf(1.0f + a2_reciprocal) - 1.0f) * 0.5f;
 
-	const float Smith_G1 = n_dot_m / (1 + lambda);
+	const float Smith_G1 = m_dot_s / (1.0f + lambda);
 	return Smith_G1;
 }
 
 // 最简单形式的G2函数，详见RTR4章节9.7中的方程9.27
 float Smith_G2_GGX(const Vec3f& m, const Vec3f& n, const Vec3f& light_dir, const Vec3f& view_dir, const float perceptual_roughness)
 {
-	float g1_shadowing = Smith_G1_GGX(m, n, light_dir, perceptual_roughness);
-	float g1_masking = Smith_G1_GGX(m, n, view_dir, perceptual_roughness);
+	const float g1_shadowing = Smith_G1_GGX(m, n, light_dir, perceptual_roughness);
+	const float g1_masking = Smith_G1_GGX(m, n, view_dir, perceptual_roughness);
 
 	return  g1_shadowing * g1_masking;
 }
-
-
-
 
 Vec4f PBRShader::VertexShaderFunction(int index, Varings& output) const
 {
@@ -164,7 +161,7 @@ Vec4f PBRShader::VertexShaderFunction(int index, Varings& output) const
 Vec4f PBRShader::PixelShaderFunction(Varings& input) const
 {
 	Vec2f uv = input.varying_vec2f[VARYING_TEXCOORD];					// 纹理坐标
-	Vec3f position_ws = input.varying_vec3f[VARYING_POSITION_WS];	// 世界空间坐标
+	Vec3f position_ws = input.varying_vec3f[VARYING_POSITION_WS];		// 世界空间坐标
 
 	Vec3f normal_ws = input.varying_vec3f[VARYING_NORMAL_WS];			// 法线
 	if (model_->normal_map_->has_data_)
@@ -179,10 +176,8 @@ Vec4f PBRShader::PixelShaderFunction(Varings& input) const
 	float metallic = model_->metallic_map_->Sample2D(uv).b;				// 金属度
 	float roughness = model_->roughness_map_->Sample2D(uv).b;				// 粗糙度
 	float occlusion = model_->occlusion_map_->Sample2D(uv).b;				// 环境光遮蔽
-	Vec3f emission = model_->emission_map_->Sample2D(uv).xyz();		// 自发光
+	Vec3f emission = model_->emission_map_->Sample2D(uv).xyz();			// 自发光
 	Vec3f base_color = model_->base_color_map_->Sample2D(uv).xyz();		// 非金属部分为albedo，金属部分为F0
-
-	Vec3f f0 = vector_lerp(dielectric_f0_, base_color, metallic);		// 获取材质的F0值
 
 	// 方向光数据
 	Vec3f light_color = uniform_buffer_->light_color;
@@ -191,28 +186,28 @@ Vec4f PBRShader::PixelShaderFunction(Varings& input) const
 	Vec3f view_dir = vector_normalize(uniform_buffer_->camera_position - position_ws);
 	Vec3f half_dir = vector_normalize(view_dir + light_dir);
 
-	float n_dot_l = Saturate(vector_dot(normal_ws, light_dir));
-	float n_dot_v = Saturate(vector_dot(normal_ws, view_dir));
+	float n_dot_l = vector_dot(normal_ws, light_dir);
+	float n_dot_l_abs = Abs(n_dot_l);
+	n_dot_l = Saturate(n_dot_l);
+	float n_dot_v_abs = Abs(vector_dot(normal_ws, view_dir));
 
+	// 表面反射的BRDF
+	Vec3f f0 = vector_lerp(dielectric_f0_, base_color, metallic);					// 获取材质的F0值
+	Vec3f F = FresnelSchlickApproximation(half_dir, light_dir, f0);					// 菲涅尔项
+	float D = NormalDistributionGGX(half_dir, normal_ws, roughness);				// 法线分布项
+	float G = Smith_G2_GGX(half_dir, normal_ws, light_dir, view_dir, roughness);	// shadowing masking项
+	Vec3f cook_torrance_brdf = F * G * D / (4.0f * n_dot_l_abs * n_dot_v_abs + kEpsilon);
 
-	// specular
-	Vec3f F = FresnelSchlickApproximation(half_dir, light_dir, f0);			// 菲涅尔项
-	float D = NormalDistributionGGX(half_dir, normal_ws, roughness);
-	float G = Smith_G2_GGX(half_dir, normal_ws, light_dir, view_dir, roughness);
-
-	Vec3f cook_torrance_brdf = F * G * D / (4.0f * n_dot_l * n_dot_v + kEpsilon);
-
-	// diffuse
-	Vec3f lambertian_brdf = base_color / kPi;
+	// 次表面散射
+	Vec3f lambertian_brdf = base_color;
 
 	// 计算反射方程
 	Vec3f kd = (Vec3f(1.0f) - F) * (1 - metallic);
-	Vec3f radiance = (kd * lambertian_brdf + cook_torrance_brdf) * light_color * n_dot_l;
+	Vec3f radiance_diffuse = kd * lambertian_brdf * light_color;
+	Vec3f radiance_specular = cook_torrance_brdf * light_color * n_dot_l * 10.0f;
 
-	//Vec3f reflect_dir = vector_reflect(view_dir, normal_ws);
-	Vec3f specular = f0;
-
-	Vec3f shaded_color = (radiance + emission) * occlusion;
+	Vec3f shaded_color = (radiance_diffuse + radiance_specular + emission) * occlusion;
+	//shaded_color = radiance_diffuse;
 
 	Vec3f display_color;
 	switch (material_inspector_)
@@ -251,6 +246,24 @@ void PBRShader::HandleKeyEvents()
 			return;
 		}
 	}
+}
+#pragma endregion
+
+#pragma region SkyBox
+
+Vec4f SkyBoxShader::VertexShaderFunction(int index, Varings& output) const
+{
+	Vec4f position_cs = uniform_buffer_->mvp_matrix * attributes_[index].position_os.xyz1();
+	const Vec3f position_ws = (uniform_buffer_->model_matrix * attributes_[index].position_os.xyz1()).xyz();
+
+	output.varying_vec3f[VARYING_POSITION_WS] = position_ws;
+	return position_cs;
+}
+
+Vec4f SkyBoxShader::PixelShaderFunction(Varings& input) const
+{
+	Vec3f position_ws = input.varying_vec3f[VARYING_POSITION_WS];		// 世界空间坐标
+	return  cubemap_->Sample(position_ws).xyz1();
 }
 
 #pragma endregion 

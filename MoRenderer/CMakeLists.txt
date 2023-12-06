@@ -8,8 +8,7 @@ add_executable (MoRenderer  "MoRenderer.cpp" "MoRenderer.h"
 "Texture.h" "Texture.cpp"
 "Model.h" "Model.cpp"
 "Camera.h" "Camera.cpp"
-  
-"main.cpp"  "Shader.h" "Shader.cpp")
+  "Shader.h" "Shader.cpp" "cmgen.h" "main.cpp")
 
 set_target_properties(
     MoRenderer

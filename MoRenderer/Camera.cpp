@@ -4,7 +4,7 @@ Camera::Camera(const Vec3f& position, const Vec3f& target, const Vec3f& up, floa
 	position_(position), target_(target), up_(up), fov_(fov), aspect_(aspect)
 {
 	near_plane_ = 0.7f;
-	far_plane_ = 20.0f;
+	far_plane_ = 1000.0f;
 
 	origin_position_ = position_;
 	origin_target_ = target_;
@@ -136,12 +136,49 @@ void Camera::HandleKeyEvents()
 
 void Camera::UpdateUniformBuffer(UniformBuffer* uniform_buffer) const
 {
+	uniform_buffer->model_matrix = matrix_set_rotate(1.0f, 0.0f, 0.0f, -kPi * 0.5f) * matrix_set_scale(1, 1, 1);
 	uniform_buffer->view_matrix = matrix_look_at(position_, target_, up_);
 	uniform_buffer->proj_matrix = matrix_set_perspective(fov_, aspect_, near_plane_, far_plane_);;
 
 	uniform_buffer->CalculateRestMatrix();
 
 	uniform_buffer->camera_position = position_;
+}
+
+void Camera::UpdateSkyBoxUniformBuffer(UniformBuffer* uniform_buffer) const
+{
+	uniform_buffer->model_matrix = matrix_set_scale(1.0f, 1.0f, 1.0f);
+	uniform_buffer->view_matrix = matrix_look_at(position_, target_, up_);
+	uniform_buffer->proj_matrix = matrix_set_perspective(fov_, aspect_, near_plane_, far_plane_);
+
+	uniform_buffer->CalculateRestMatrix();
+
+	uniform_buffer->camera_position = position_;
+}
+
+void Camera::UpdateSkyboxMesh(SkyBoxShader* sky_box_shader) const
+{
+	float fov = fov_ / 180.0f * kPi;
+	float yf = tan(fov * 0.5f);
+	float  xf = aspect_;
+
+	Vec3f right_top = axis_v_ + axis_r_ * xf + axis_u_ * yf;
+	Vec3f left_top = axis_v_ - axis_r_ * xf + axis_u_ * yf;
+	Vec3f left_bottom = axis_v_ - axis_r_ * xf - axis_u_ * yf;
+	Vec3f right_bottom = axis_v_ + axis_r_ * xf - axis_u_ * yf;
+
+	//Vec3f right_top = Vec3f(xf, yf, 1);
+	//Vec3f left_top = Vec3f(-xf, yf, 1);
+	//Vec3f left_bottom = Vec3f(-xf, -yf, 1);
+	//Vec3f right_bottom = Vec3f(xf, -yf, 1);
+
+	Vec3f camera_position = position_;
+	float far_plane = far_plane_-1;
+
+	sky_box_shader->plane_vertex_[0] = camera_position + far_plane * right_top;
+	sky_box_shader->plane_vertex_[1] = camera_position + far_plane * left_top;
+	sky_box_shader->plane_vertex_[2] = camera_position + far_plane * left_bottom;
+	sky_box_shader->plane_vertex_[3] = camera_position + far_plane * right_bottom;
 }
 
 

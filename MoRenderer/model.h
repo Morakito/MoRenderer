@@ -25,10 +25,14 @@ enum TextureType
 
 class Model {
 public:
-	explicit Model(const std::string file_path, const std::string file_name, const std::string texture_format);
+
+	// 用于加载外部模型
+	explicit Model(const std::string& file_path, const std::string& file_name, const std::string& texture_format);
+
+	// 用于程序化生成模型
+	Model(std::vector<Vec3f>& vertex, const std::vector<int>& index);
 
 	~Model();
-
 
 public:
 	static std::string GetTextureType(TextureType texture_type);
@@ -47,7 +51,6 @@ public:
 	Texture* occlusion_map_;
 	Texture* emission_map_;
 };
-
 
 #endif
 
