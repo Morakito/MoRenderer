@@ -18,7 +18,7 @@ public:
 	// 更新uniform buffer中的矩阵
 	void UpdateUniformBuffer(UniformBuffer* uniform_buffer) const;
 	void UpdateSkyBoxUniformBuffer(UniformBuffer* uniform_buffer) const;
-	void UpdateSkyboxMesh(SkyBoxShader* sky_box_shader);
+	void UpdateSkyboxMesh(SkyBoxShader* sky_box_shader) const;
 
 private:
 	// 更新相机姿态

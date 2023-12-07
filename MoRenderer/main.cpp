@@ -9,6 +9,12 @@
 
 #include  "cmgen.h"
 
+int main1()
+{
+	GenerateCubeMap();
+
+	return  0;
+}
 
 int main() {
 
@@ -30,9 +36,12 @@ int main() {
 	const std::string model_message = "vertex count: " + std::to_string(model->vertex_number_) + "  face count: " + std::to_string(model->face_number_) + "\n";
 	window->SetLogMessage("model_message", model_message);
 
-	// 加载天空盒
+	// 加载环境贴图
 	std::string skybox_folder = "C:/WorkSpace/MoRenderer/assets/spruit_sunrise/spruit_sunrise/";
-	auto* cubemap = new CubeMap(skybox_folder);
+	auto* skybox_cubemap = new CubeMap(skybox_folder, CubeMap::kSkybox);
+	auto* irradiance_cubemap = new CubeMap(skybox_folder, CubeMap::kIrradianceMap);
+	auto* specular_cubemap = new SpecularCubeMap(skybox_folder, CubeMap::kSpecularMap);
+	auto* brdf_lut = new Texture(skybox_folder + "brdf_lut.hdr");
 
 #pragma endregion
 
@@ -64,10 +73,13 @@ int main() {
 	const auto pbr_shader = new PBRShader();
 	pbr_shader->uniform_buffer_ = uniform_buffer;
 	pbr_shader->model_ = model;
+	pbr_shader->irradiance_cubemap_ = irradiance_cubemap;
+	pbr_shader->specular_cubemap_ = specular_cubemap;
+	pbr_shader->brdf_lut_ = brdf_lut;
 
 	const auto skybox_shader = new SkyBoxShader();
 	skybox_shader->uniform_buffer_ = uniform_buffer;
-	skybox_shader->cubemap_ = cubemap;
+	skybox_shader->skybox_cubemap_ = skybox_cubemap;
 
 	//constexpr ShaderType current_shader_type = kBlinnPhongShader;
 	constexpr ShaderType current_shader_type = kPbrShader;

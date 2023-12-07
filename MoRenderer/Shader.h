@@ -148,6 +148,9 @@ public:
 		// 非金属的F0值默认为0.04
 		dielectric_f0_ = Vec3f(0.04f);
 		material_inspector_ = kMaterialInspectorShaded;
+
+		// 是否使用LUT
+		use_lut_ = false;
 	}
 	Vec4f VertexShaderFunction(int index, Varings& output) const override;
 	Vec4f PixelShaderFunction(Varings& input) const override;
@@ -187,6 +190,12 @@ public:
 
 	MaterialInspector material_inspector_;
 	Vec3f dielectric_f0_;
+
+	CubeMap* irradiance_cubemap_;
+	SpecularCubeMap* specular_cubemap_;
+	Texture* brdf_lut_;
+
+	bool use_lut_;
 };
 
 
@@ -208,7 +217,7 @@ public:
 	};
 
 public:
-	CubeMap* cubemap_;
+	CubeMap* skybox_cubemap_;
 
 	std::vector<Vec3f> plane_vertex_ = {
 		{0.5f,0.5f,0.5f},			// 右上角

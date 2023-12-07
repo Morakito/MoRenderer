@@ -5,6 +5,7 @@
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+#include "tiny_obj_loader.h"
 
 #pragma region Texture
 
@@ -82,16 +83,41 @@ ColorRGBA Texture::BilinearInterpolation(const ColorRGBA& color00, const ColorRG
 }
 #pragma endregion
 
-#pragma region CubeMap
+#pragma region Environment Map
 
-CubeMap::CubeMap(const std::string& file_folder)
+CubeMap::CubeMap(const std::string& file_folder, CubeMapType cube_map_type, int mipmap_level )
 {
-	cubemap_[0] = new Texture(file_folder + "m0_px.hdr");
-	cubemap_[1] = new Texture(file_folder + "m0_nx.hdr");
-	cubemap_[2] = new Texture(file_folder + "m0_py.hdr");
-	cubemap_[3] = new Texture(file_folder + "m0_ny.hdr");
-	cubemap_[4] = new Texture(file_folder + "m0_pz.hdr");
-	cubemap_[5] = new Texture(file_folder + "m0_nz.hdr");
+	cube_map_type_ = cube_map_type;
+
+	switch (cube_map_type_)
+	{
+	case kSkybox:
+		cubemap_[0] = new Texture(file_folder + "m0_px.hdr");
+		cubemap_[1] = new Texture(file_folder + "m0_nx.hdr");
+		cubemap_[2] = new Texture(file_folder + "m0_py.hdr");
+		cubemap_[3] = new Texture(file_folder + "m0_ny.hdr");
+		cubemap_[4] = new Texture(file_folder + "m0_pz.hdr");
+		cubemap_[5] = new Texture(file_folder + "m0_nz.hdr");
+		break;
+	case kIrradianceMap:
+		cubemap_[0] = new Texture(file_folder + "i_px.hdr");
+		cubemap_[1] = new Texture(file_folder + "i_nx.hdr");
+		cubemap_[2] = new Texture(file_folder + "i_py.hdr");
+		cubemap_[3] = new Texture(file_folder + "i_ny.hdr");
+		cubemap_[4] = new Texture(file_folder + "i_pz.hdr");
+		cubemap_[5] = new Texture(file_folder + "i_nz.hdr");
+		break;
+	case kSpecularMap:
+		cubemap_[0] = new Texture(file_folder + "m" + std::to_string(mipmap_level) + "_px.hdr");
+		cubemap_[1] = new Texture(file_folder + "m" + std::to_string(mipmap_level) + "_nx.hdr");
+		cubemap_[2] = new Texture(file_folder + "m" + std::to_string(mipmap_level) + "_py.hdr");
+		cubemap_[3] = new Texture(file_folder + "m" + std::to_string(mipmap_level) + "_ny.hdr");
+		cubemap_[4] = new Texture(file_folder + "m" + std::to_string(mipmap_level) + "_pz.hdr");
+		cubemap_[5] = new Texture(file_folder + "m" + std::to_string(mipmap_level) + "_nz.hdr");
+		break;
+	default:;
+	}
+
 }
 
 CubeMap::~CubeMap()
@@ -171,6 +197,14 @@ CubeMap::CubeMapUV& CubeMap::CalculateCubeMapUV(Vec3f& direction)
 	cubemap_uv.uv.v = (tc / ma + 1.0f) / 2.0f;
 
 	return  cubemap_uv;
+}
+
+SpecularCubeMap::SpecularCubeMap(const std::string& file_folder, CubeMap::CubeMapType cube_map_type)
+{
+	for (size_t i = 0; i < max_mipmap_level_; i++)
+	{
+		prefilter_maps_[i] = new CubeMap(file_folder, CubeMap::kSpecularMap, i);
+	}
 }
 
 

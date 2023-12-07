@@ -32,22 +32,43 @@ public:
 // 立方体贴图，用于天空盒
 class CubeMap
 {
-public:
-	CubeMap(const std::string& file_folder);
-	~CubeMap();
 
+public:
 	struct CubeMapUV
 	{
 		int face_id;
 		Vec2f uv;
 	};
 
+	enum CubeMapType
+	{
+		kSkybox,
+		kIrradianceMap,
+		kSpecularMap
+	};
+
+public:
+	CubeMap(const std::string& file_folder, CubeMapType cube_map_type, int mipmap_level=0);
+	~CubeMap();
 	Vec3f Sample(Vec3f& direction) const;
 
 	static CubeMapUV& CalculateCubeMapUV(Vec3f& direction);
 
 public:
 	Texture* cubemap_[6];
+	CubeMapType cube_map_type_;
+};
+
+
+class SpecularCubeMap
+{
+public:
+	SpecularCubeMap(const std::string& file_folder, CubeMap::CubeMapType cube_map_type);
+
+
+public:
+	static constexpr int max_mipmap_level_ = 10;
+	CubeMap* prefilter_maps_[max_mipmap_level_];
 };
 
 

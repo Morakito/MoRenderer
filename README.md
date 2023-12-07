@@ -2,7 +2,7 @@
 
 MoRenderer is a software rasterization renderer based on c++11. The main purpose of the project is to learn the principles of rendering. Currently only Windows is supported (uses win32 to display window and image)
 
-<img src="images/diablo3.png" width="410">
+<img src="images/helmet.png" width="410">
 
 ## Feature
 
@@ -39,12 +39,15 @@ MoRenderer is a software rasterization renderer based on c++11. The main purpose
     -   use keyboard number to switch material inspector
     -   Blinn-Phong material inspector
     -   Physically Based Shading material inspector
+-   image-based lighting (IBL)
+    -   irradiance map
+    -   prefilter specular environment map
+-   ACES tone mapping
 
 
 ## ToDo List
+-   optimized texture loading
 
--   image-based lighting (IBL)
--   tone mapping
 
 ## Build
 

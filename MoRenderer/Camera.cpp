@@ -60,7 +60,6 @@ void Camera::UpdateCameraPose()
 	position_[2] = target_[2] + radius * sin(theta) * cos(phi);
 }
 
-
 void Camera::HandleInputEvents()
 {
 	/*
@@ -173,7 +172,7 @@ void Camera::UpdateSkyboxMesh(SkyBoxShader* sky_box_shader) const
 	//Vec3f right_bottom = Vec3f(xf, -yf, 1);
 
 	Vec3f camera_position = position_;
-	float far_plane = far_plane_-1;
+	float far_plane = far_plane_ - 1;
 
 	sky_box_shader->plane_vertex_[0] = camera_position + far_plane * right_top;
 	sky_box_shader->plane_vertex_[1] = camera_position + far_plane * left_top;

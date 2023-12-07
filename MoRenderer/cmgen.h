@@ -47,10 +47,13 @@ void GenerateCubeMap() {
 
 	std::string irradiance_command = cmgen_path + " --format=hdr --ibl-irradiance=" + output_path + " " + file;
 	std::string specular_command = cmgen_path + " --format=hdr --size=512 --ibl-ld=" + output_path + " " + file;
-	std::string command_str = cmgen_path + " --format=hdr --ibl-irradiance=" + output_path + " " + file;
+	std::string lut_command = cmgen_path + " --ibl-dfg=" + output_path + "/spruit_sunrise/brdf_lut.hdr";
+
+	std::cout << lut_command << std::endl;
 
 	ExecuteProcess(irradiance_command);
 	ExecuteProcess(specular_command);
+	ExecuteProcess(lut_command);
 
 }
 
