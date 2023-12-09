@@ -1,4 +1,4 @@
-# MoRenderer（Unfinished）
+# MoRenderer
 
 MoRenderer is a software rasterization renderer based on c++11. The main purpose of the project is to learn the principles of rendering. Currently only Windows is supported (uses win32 to display window and image)
 
@@ -44,11 +44,6 @@ MoRenderer is a software rasterization renderer based on c++11. The main purpose
     -   prefilter specular environment map
 -   ACES tone mapping
 
-
-## ToDo List
--   optimized texture loading
-
-
 ## Build
 
 A CMakeLists.txt file is provided for generating project files using CMake
@@ -71,14 +66,17 @@ start Renderer.sln
 -   Reset Camera: Space
 
 ### Material Inspector Control
--   Blinn-Phong shading: keyboard 0-7
--   Physically Based Shading: keyboard 0-8
+-   Blinn-Phong shading: keyboard number 1-7
+-   Physically Based Shading: keyboard number 1-8
+-   Wireframe rendering：keyboard number 0
+
+### Assets Control
+-   Switch model: keyboard up/down
+-   Switch skybox: keyboard left/right
 
 ## Reference
 
 [stb_image.h](https://github.com/nothings/stb "stb_image")
-
-[tiny_obj_loader.h](https://github.com/tinyobjloader/tinyobjloader "tiny_obj_loader")
 
 skywind3000's implementation of [software renderer](https://github.com/skywind3000/RenderHelp "software renderer")
 

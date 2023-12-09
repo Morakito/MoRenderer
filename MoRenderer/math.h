@@ -201,6 +201,9 @@ inline static Mat4x4f matrix_set_perspective(float fov, const float aspect, cons
  *	n.x		n.y		n.z		0
  *	0		0		0		1
  *
+ *	TBN¾ØÕóÊÇÕı½»¾ØÕó£ºÄæ¾ØÕó = ×ªÖÃ¾ØÕó
+ *	TBN * tangent_ws = tangent_os
+ *	tangent_ws = matrix_invert(TBN) * tangent_os
  *
  */
 inline static Vec3f calculate_normal(const Vec3f& normal_ws, const Vec4f& tangent_ws, const Vec3f& perturb_normal)
@@ -215,7 +218,7 @@ inline static Vec3f calculate_normal(const Vec3f& normal_ws, const Vec4f& tangen
 	tbn.SetRow(2, Vec4f(n.x, n.y, n.z, 0));
 	tbn.m[3][3] = 1;
 
-	return (tbn * perturb_normal.xyz1()).xyz() * tangent_ws.w;
+	return (matrix_invert(tbn) * perturb_normal.xyz1()).xyz();
 }
 
 

@@ -13,36 +13,34 @@ struct Attributes {
 	Vec4f tangent_os;
 };
 
-enum TextureType
-{
-	kTextureTypeBaseColor,
-	kTextureTypeNormal,
-	kTextureTypeRoughness,
-	kTextureTypeMetallic,
-	kTextureTypeOcclusion,
-	kTextureTypeEmission
-};
-
 class Model {
 public:
 
-	// 用于加载外部模型
-	explicit Model(const std::string& file_path, const std::string& file_name, const std::string& texture_format);
+	// 加载外部模型，并根据纹理格式尝试加载贴图
+	Model(const std::string& model_path, const Mat4x4f& model_matrix);
 
 	// 用于程序化生成模型
 	Model(std::vector<Vec3f>& vertex, const std::vector<int>& index);
 
+	std::string PrintModelInfo();
+
 	~Model();
+
+private:
+	void LoadModel(const std::string& model_name);
 
 public:
 	static std::string GetTextureType(TextureType texture_type);
 	static std::string GetTextureFileName(const std::string& file_path, const std::string& file_name, TextureType texture_type, const std::string& texture_format);
 
+
 public:
 	std::vector<Attributes> attributes_;
+	Mat4x4f model_matrix_;
 
-	int vertex_number_;
-	int face_number_;
+	std::string model_folder_, model_name_;
+
+	int vertex_number_, face_number_;
 
 	Texture* base_color_map_;
 	Texture* normal_map_;

@@ -48,8 +48,6 @@ enum ShaderType
 	kSkyBoxShader
 };
 
-
-
 // 顶点着色器：返回顶点的裁剪空间坐标
 typedef std::function<Vec4f(int index, Varings& output)> VertexShader;
 
@@ -62,9 +60,9 @@ class IShader
 public:
 	virtual ~IShader() = default;
 
-	IShader()
+	IShader(UniformBuffer* uniform_buffer)
 	{
-		uniform_buffer_ = new UniformBuffer();
+		uniform_buffer_ = uniform_buffer;
 		attributes_ = new Attributes[3];
 		window_ = Window::GetInstance();
 
@@ -97,7 +95,7 @@ public:
 class BlinnPhongShader final :public IShader
 {
 public:
-	BlinnPhongShader()
+	BlinnPhongShader(UniformBuffer* uniform_buffer) : IShader(uniform_buffer)
 	{
 
 	}
@@ -143,7 +141,7 @@ public:
 class PBRShader final :public IShader
 {
 public:
-	PBRShader()
+	PBRShader(UniformBuffer* uniform_buffer) : IShader(uniform_buffer)
 	{
 		// 非金属的F0值默认为0.04
 		dielectric_f0_ = Vec3f(0.04f);
@@ -202,9 +200,9 @@ public:
 class SkyBoxShader final :public IShader
 {
 public:
-	SkyBoxShader()
+	SkyBoxShader(UniformBuffer* uniform_buffer) : IShader(uniform_buffer)
 	{
-		
+
 	}
 
 	Vec4f VertexShaderFunction(int index, Varings& output) const override;

@@ -3,6 +3,16 @@
 
 #include "math.h"
 
+enum TextureType
+{
+	kTextureTypeBaseColor,
+	kTextureTypeNormal,
+	kTextureTypeRoughness,
+	kTextureTypeMetallic,
+	kTextureTypeOcclusion,
+	kTextureTypeEmission
+};
+
 // 单张纹理贴图
 class Texture
 {
@@ -29,7 +39,7 @@ public:
 	unsigned char* texture_data_;		// 实际的图像数据
 };
 
-// 立方体贴图，用于天空盒
+// 立方体贴图
 class CubeMap
 {
 
@@ -48,7 +58,7 @@ public:
 	};
 
 public:
-	CubeMap(const std::string& file_folder, CubeMapType cube_map_type, int mipmap_level=0);
+	CubeMap(const std::string& file_folder, CubeMapType cube_map_type, int mipmap_level = 0);
 	~CubeMap();
 	Vec3f Sample(Vec3f& direction) const;
 
@@ -59,7 +69,7 @@ public:
 	CubeMapType cube_map_type_;
 };
 
-
+// 预过滤的环境贴图
 class SpecularCubeMap
 {
 public:
@@ -69,6 +79,24 @@ public:
 public:
 	static constexpr int max_mipmap_level_ = 10;
 	CubeMap* prefilter_maps_[max_mipmap_level_];
+};
+
+
+class IBLMap
+{
+
+public:
+	IBLMap() = default;
+	IBLMap(const std::string& skybox_path);
+
+public:
+	CubeMap* skybox_cubemap_;
+	CubeMap* irradiance_cubemap_;
+	SpecularCubeMap* specular_cubemap_;
+	Texture* brdf_lut_;
+
+	std::string skybox_name_;
+	std::string skybox_folder_;
 };
 
 

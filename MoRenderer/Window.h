@@ -53,6 +53,8 @@ public:
 	bool is_close_;						// 窗口是否关闭
 	Mouse mouse_info_;					// 鼠标信息
 
+	bool can_press_keyboard_;
+
 private:
 	HWND hwnd_;
 	HDC memory_dc_;

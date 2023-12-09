@@ -16,7 +16,7 @@ public:
 	void HandleInputEvents();
 
 	// 更新uniform buffer中的矩阵
-	void UpdateUniformBuffer(UniformBuffer* uniform_buffer) const;
+	void UpdateUniformBuffer(UniformBuffer* uniform_buffer, const Mat4x4f& model_matrix) const;
 	void UpdateSkyBoxUniformBuffer(UniformBuffer* uniform_buffer) const;
 	void UpdateSkyboxMesh(SkyBoxShader* sky_box_shader) const;
 

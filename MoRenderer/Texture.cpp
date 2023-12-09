@@ -5,7 +5,8 @@
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
-#include "tiny_obj_loader.h"
+
+#include "utility.h"
 
 #pragma region Texture
 
@@ -205,6 +206,23 @@ SpecularCubeMap::SpecularCubeMap(const std::string& file_folder, CubeMap::CubeMa
 	{
 		prefilter_maps_[i] = new CubeMap(file_folder, CubeMap::kSpecularMap, i);
 	}
+}
+
+IBLMap::IBLMap(const std::string& skybox_path)
+{
+	skybox_name_ = GetFileNameWithoutExtension(skybox_path);
+	skybox_folder_ = GetFileFolder(skybox_path) + "/" + skybox_name_ + "/";
+	// 检查并生成IBL
+	if (!CheckFileExist(skybox_folder_ + "brdf_lut.hdr"))
+	{
+		GenerateCubeMap(skybox_path);
+	}
+
+	// 加载IBL资源
+	skybox_cubemap_ = new CubeMap(skybox_folder_, CubeMap::kSkybox);
+	irradiance_cubemap_ = new CubeMap(skybox_folder_, CubeMap::kIrradianceMap);
+	specular_cubemap_ = new SpecularCubeMap(skybox_folder_, CubeMap::kSpecularMap);
+	brdf_lut_ = new Texture(skybox_folder_ + "brdf_lut.hdr");
 }
 
 

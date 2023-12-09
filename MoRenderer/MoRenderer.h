@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <cstdint>
-#include <ranges>
 
 #include "math.h"
 #include  "Shader.h"

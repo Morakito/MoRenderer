@@ -11,9 +11,18 @@ endif()
 
 project ("MoRenderer")
 
+
+# 复制资源文件夹到输出路径
+execute_process( COMMAND ${CMAKE_COMMAND} -E copy_directory 
+${PROJECT_SOURCE_DIR}/assets
+${CMAKE_BINARY_DIR}/assets)
+
+ execute_process( COMMAND ${CMAKE_COMMAND} -E copy_directory 
+${PROJECT_SOURCE_DIR}/tools
+${CMAKE_BINARY_DIR}/tools)
+
 include_directories ("Library")
 
 # 包含子项目。
 add_subdirectory ("MoRenderer")
-
 

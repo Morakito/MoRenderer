@@ -3,7 +3,7 @@
 Camera::Camera(const Vec3f& position, const Vec3f& target, const Vec3f& up, float fov, float aspect) :
 	position_(position), target_(target), up_(up), fov_(fov), aspect_(aspect)
 {
-	near_plane_ = 0.7f;
+	near_plane_ = 0.4f;
 	far_plane_ = 1000.0f;
 
 	origin_position_ = position_;
@@ -102,22 +102,22 @@ void Camera::HandleKeyEvents()
 	{
 		position_ += 0.05f * axis_v_;
 	}
-	if (window_->keys_[VK_UP] || window_->keys_['W'])
+	if (window_->keys_['W'])
 	{
 		position_ += 0.05f * axis_u_;
 		target_ += 0.05f * axis_u_;
 	}
-	if (window_->keys_[VK_DOWN] || window_->keys_['S'])
+	if (window_->keys_['S'])
 	{
 		position_ += -0.05f * axis_u_;
 		target_ += -0.05f * axis_u_;
 	}
-	if (window_->keys_[VK_LEFT] || window_->keys_['A'])
+	if (window_->keys_['A'])
 	{
 		position_ += -0.05f * axis_r_;
 		target_ += -0.05f * axis_r_;
 	}
-	if (window_->keys_[VK_RIGHT] || window_->keys_['D'])
+	if (window_->keys_['D'])
 	{
 		position_ += 0.05f * axis_r_;
 		target_ += 0.05f * axis_r_;
@@ -133,9 +133,9 @@ void Camera::HandleKeyEvents()
 	}
 }
 
-void Camera::UpdateUniformBuffer(UniformBuffer* uniform_buffer) const
+void Camera::UpdateUniformBuffer(UniformBuffer* uniform_buffer, const Mat4x4f& model_matrix) const
 {
-	uniform_buffer->model_matrix = matrix_set_rotate(1.0f, 0.0f, 0.0f, -kPi * 0.5f) * matrix_set_scale(1, 1, 1);
+	uniform_buffer->model_matrix = model_matrix;
 	uniform_buffer->view_matrix = matrix_look_at(position_, target_, up_);
 	uniform_buffer->proj_matrix = matrix_set_perspective(fov_, aspect_, near_plane_, far_plane_);;
 

@@ -71,6 +71,7 @@ void Window::WindowInit(const int width, const int height, const char* title)
 	// 初始化LOG信息
 	num_frames_per_second_ = 0;
 	current_frame_time_ = PlatformGetTime();
+	can_press_keyboard_ = false;
 }
 
 void Window::WindowDestroy()
@@ -259,6 +260,8 @@ void Window::UpdateFpsData()
 		SetLogMessage("fps_message", fps_message);
 		num_frames_per_second_ = 0;
 		last_frame_time_ = current_frame_time_;
+
+		can_press_keyboard_ = true;
 	}
 }
 

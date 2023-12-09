@@ -8,14 +8,13 @@ add_executable (MoRenderer  "MoRenderer.cpp" "MoRenderer.h"
 "Texture.h" "Texture.cpp"
 "Model.h" "Model.cpp"
 "Camera.h" "Camera.cpp"
-  "Shader.h" "Shader.cpp" "cmgen.h" "main.cpp")
+  "Shader.h" "Shader.cpp"  "Scene.h" "Scene.cpp" "main.cpp" "utility.h") 
 
 set_target_properties(
     MoRenderer
     PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE"
                LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
 )
-
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET MoRenderer PROPERTY CXX_STANDARD 20)
