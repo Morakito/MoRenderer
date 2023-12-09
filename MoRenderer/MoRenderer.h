@@ -144,10 +144,10 @@ public:
 	// 绘制三角形
 	void DrawMesh();
 	// 光栅化三角形
-	void RasterizeTriangle(Vertex vertex[3]);
+	void RasterizeTriangle(Vertex *vertex[3]);
 
 	// 绘制线框
-	void DrawWireFrame(Vertex vertex[3]) const;
+	void DrawWireFrame(Vertex* vertex[3]) const;
 	// 绘制一条线
 	void DrawLine(int x1, int y1, int x2, int y2, const Vec4f& color) const;
 
@@ -165,7 +165,7 @@ public:
 
 	// 渲染中使用的临时数据
 	Vertex vertex_[3];				// 三角形的输入顶点
-	Vertex clip_vertex_[4];			// 经过clip之后的顶点
+	Vertex* clip_vertex_[4];			// 经过clip之后的顶点
 
 	EdgeEquation edge_equation_[3];
 	Varings current_varings_;
