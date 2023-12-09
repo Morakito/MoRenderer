@@ -6,7 +6,6 @@
 #include "Window.h"
 #include "model.h"
 #include "Camera.h"
-
 #include "Scene.h"
 
 
@@ -62,17 +61,16 @@ int main() {
 
 	while (!window->is_close_)
 	{
-		HandleModelSkyboxSwitchEvents(window, scene, mo_renderer);
-		camera->HandleInputEvents();
-		scene->HandleKeyEvents(pbr_shader, blinn_phong_shader);
+		HandleModelSkyboxSwitchEvents(window, scene, mo_renderer);		// 切换天空盒和模型，切换线框渲染
+		camera->HandleInputEvents();									// 更新相机参数
+		scene->HandleKeyEvents(pbr_shader, blinn_phong_shader);			// 更新当前使用的shader
 
+#pragma region 渲染Model
 		model = scene->current_model_;
-		scene->UpdateShaderInfo(blinn_phong_shader);
-		scene->UpdateShaderInfo(pbr_shader);
-		scene->UpdateShaderInfo(skybox_shader);
 		switch (scene->current_shader_type_)
 		{
 		case kBlinnPhongShader:
+			scene->UpdateShaderInfo(blinn_phong_shader);
 			mo_renderer->SetVertexShader(blinn_phong_shader->vertex_shader_);
 			mo_renderer->SetPixelShader(blinn_phong_shader->pixel_shader_);
 			camera->UpdateUniformBuffer(blinn_phong_shader->uniform_buffer_, model->model_matrix_);
@@ -80,6 +78,7 @@ int main() {
 			blinn_phong_shader->HandleKeyEvents();
 			break;
 		case kPbrShader:
+			scene->UpdateShaderInfo(pbr_shader);
 			mo_renderer->SetVertexShader(pbr_shader->vertex_shader_);
 			mo_renderer->SetPixelShader(pbr_shader->pixel_shader_);
 			camera->UpdateUniformBuffer(pbr_shader->uniform_buffer_, model->model_matrix_);
@@ -89,7 +88,7 @@ int main() {
 		default:;
 		}
 
-		mo_renderer->ClearFrameBuffer();
+		mo_renderer->ClearFrameBuffer(mo_renderer->render_frame_, true);
 		for (size_t i = 0; i < model->attributes_.size(); i += 3)
 		{
 			// 设置三个顶点的输入，供 VS 读取
@@ -113,12 +112,15 @@ int main() {
 			// 绘制三角形
 			mo_renderer->DrawMesh();
 		}
+#pragma endregion
 
-		// 渲染skybox
+
+#pragma region 渲染Skybox
+		scene->UpdateShaderInfo(skybox_shader);
 		mo_renderer->SetVertexShader(skybox_shader->vertex_shader_);
 		mo_renderer->SetPixelShader(skybox_shader->pixel_shader_);
-		camera->UpdateSkyBoxUniformBuffer(skybox_shader->uniform_buffer_);
 
+		camera->UpdateSkyBoxUniformBuffer(skybox_shader->uniform_buffer_);
 		camera->HandleInputEvents();
 		camera->UpdateSkyboxMesh(skybox_shader);
 		for (size_t i = 0; i < skybox_shader->plane_vertex_.size() - 2; i++)
@@ -129,6 +131,7 @@ int main() {
 
 			mo_renderer->DrawSkybox();
 		}
+#pragma endregion
 
 		window->WindowDisplay(mo_renderer->color_buffer_);
 	}

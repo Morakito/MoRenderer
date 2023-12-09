@@ -1,11 +1,15 @@
-#include "Model.h"
+Ôªø#include "Model.h"
 
 #include "utility.h"
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
 Model::Model(const std::string& model_path, const Mat4x4f& model_matrix)
 {
-	// º”‘ÿOBJƒ£–Õ
-	LoadModel(model_path);
+	// Âä†ËΩΩOBJÊ®°Âûã
+	//LoadModel(model_path);
+	LoadModelByTinyObj(model_path);
 
 	model_folder_ = GetFileFolder(model_path);
 	model_name_ = GetFileNameWithoutExtension(model_path);
@@ -13,7 +17,7 @@ Model::Model(const std::string& model_path, const Mat4x4f& model_matrix)
 	const std::string basecolor_file_name = GetFilePathByFileName(model_folder_, Model::GetTextureType(kTextureTypeBaseColor));
 	std::string texture_format = GetFileExtension(basecolor_file_name);
 
-	// º”‘ÿŒ∆¿Ì
+	// Âä†ËΩΩÁ∫πÁêÜ
 	{
 		base_color_map_ = new Texture(GetTextureFileName(model_folder_, model_name_, kTextureTypeBaseColor, texture_format));
 		normal_map_ = new Texture(GetTextureFileName(model_folder_, model_name_, kTextureTypeNormal, texture_format));
@@ -39,38 +43,38 @@ void Model::LoadModel(const std::string& model_name)
 	char line[LINE_SIZE];
 	FILE* file = fopen(model_name.c_str(), "rb");
 	while (true) {
-		int items;
-		if (fgets(line, LINE_SIZE, file) == NULL) {
+		if (fgets(line, LINE_SIZE, file) == nullptr) {
 			break;
 		}
 		else if (strncmp(line, "v ", 2) == 0) {               /* position */
 			Vec3f position;
-			items = sscanf(line, "v %f %f %f",
+			sscanf(line, "v %f %f %f",
 				&position.x, &position.y, &position.z);
 			positions.push_back(position);
 		}
 		else if (strncmp(line, "vt ", 3) == 0) {              /* texcoord */
 			Vec2f texcoord;
-			items = sscanf(line, "vt %f %f",
+			sscanf(line, "vt %f %f",
 				&texcoord.x, &texcoord.y);
-			assert(items == 2);
 			texcoords.push_back(texcoord);
 		}
 		else if (strncmp(line, "vn ", 3) == 0) {              /* normal */
 			Vec3f normal;
-			items = sscanf(line, "vn %f %f %f",
+			sscanf(line, "vn %f %f %f",
 				&normal.x, &normal.y, &normal.z);
-			assert(items == 3);
 			normals.push_back(normal);
 		}
 		else if (strncmp(line, "f ", 2) == 0) {               /* face */
 			int i;
 			int pos_indices[3], uv_indices[3], n_indices[3];
-			items = sscanf(line, "f %d/%d/%d %d/%d/%d %d/%d/%d",
+			sscanf(line, "f %d/%d/%d %d/%d/%d %d/%d/%d",
 				&pos_indices[0], &uv_indices[0], &n_indices[0],
 				&pos_indices[1], &uv_indices[1], &n_indices[1],
 				&pos_indices[2], &uv_indices[2], &n_indices[2]);
-			assert(items == 9);
+
+			std::cout << pos_indices[0] << " ";
+			std::cout << uv_indices[0] << " ";
+			std::cout << n_indices[0] << std::endl;
 			for (i = 0; i < 3; i++) {
 				position_indices.push_back(pos_indices[i] - 1);
 				texcoord_indices.push_back(uv_indices[i] - 1);
@@ -79,9 +83,8 @@ void Model::LoadModel(const std::string& model_name)
 		}
 		else if (strncmp(line, "# ext.tangent ", 14) == 0) {  /* tangent */
 			Vec4f tangent;
-			items = sscanf(line, "# ext.tangent %f %f %f %f",
+			sscanf(line, "# ext.tangent %f %f %f %f",
 				&tangent.x, &tangent.y, &tangent.z, &tangent.w);
-			assert(items == 4);
 			tangents.push_back(tangent);
 		}
 	}
@@ -99,8 +102,8 @@ void Model::LoadModel(const std::string& model_name)
 		attribute.position_os = positions[position_index];
 		attribute.normal_os = normals[normal_index];
 
-		// ≤ø∑÷uv÷µ¥Û”⁄1£¨œ»Ω´uv÷µ◊™ªªµΩ[0-1]«¯º‰÷–
-		// uv◊¯±Íµƒ‘≠µ„Œª”⁄◊Ûœ¬Ω«£¨Ã˘Õº ˝æ›µƒ‘≠µ„Œª”⁄◊Û…œΩ«£¨“Ú¥À–Ë“™‘⁄v÷·…œ∑¥œÚ
+		// ÈÉ®ÂàÜuvÂÄºÂ§ß‰∫é1ÔºåÂÖàÂ∞ÜuvÂÄºËΩ¨Êç¢Âà∞[0-1]Âå∫Èó¥‰∏≠
+		// uvÂùêÊ†áÁöÑÂéüÁÇπ‰Ωç‰∫éÂ∑¶‰∏ãËßíÔºåË¥¥ÂõæÊï∞ÊçÆÁöÑÂéüÁÇπ‰Ωç‰∫éÂ∑¶‰∏äËßíÔºåÂõ†Ê≠§ÈúÄË¶ÅÂú®vËΩ¥‰∏äÂèçÂêë
 		float u = texcoords[texcoord_index].u;
 		float v = texcoords[texcoord_index].v;
 		v = 1.0f - fmod(v, 1.0f);
@@ -117,8 +120,86 @@ void Model::LoadModel(const std::string& model_name)
 
 		attributes_.push_back(attribute);
 	}
+
+	has_tangent_ = tangents.size() > 0;
 }
 
+
+void Model::LoadModelByTinyObj(const std::string& model_name)
+{
+	// Âä†ËΩΩÂàáÁ∫ø
+	std::pmr::vector<Vec4f>tangents;
+	constexpr int LINE_SIZE = 256;
+	char line[LINE_SIZE];
+	FILE* file = fopen(model_name.c_str(), "rb");
+	while (true) {
+		int items;
+		if (fgets(line, LINE_SIZE, file) == nullptr) {
+			break;
+		}
+		if (strncmp(line, "# ext.tangent ", 14) == 0) {  /* tangent */
+			Vec4f tangent;
+			items = sscanf(line, "# ext.tangent %f %f %f %f",
+				&tangent.x, &tangent.y, &tangent.z, &tangent.w);
+			tangents.push_back(tangent);
+		}
+	}
+	has_tangent_ = tangents.size() > 0;
+
+	{
+		tinyobj::attrib_t attributes;
+		std::vector<tinyobj::shape_t> shapes;
+		std::vector<tinyobj::material_t> materials;
+		std::string warn, err;
+		if (!LoadObj(&attributes, &shapes, &materials, &warn, &err, model_name.c_str())) {
+			throw std::runtime_error(warn + err);
+		}
+		vertex_number_ = 0;
+		face_number_ = 0;
+		for (const auto& shape : shapes) {
+			for (size_t face_id = 0; face_id < shape.mesh.indices.size();) {
+				for (size_t i = 0; i < 3; i++) {
+					Attributes attribute{};
+					auto& index = shape.mesh.indices[face_id + i];
+					attribute.position_os = {
+						attributes.vertices[3 * index.vertex_index + 0],
+						attributes.vertices[3 * index.vertex_index + 1],
+						attributes.vertices[3 * index.vertex_index + 2]
+					};
+					attribute.texcoord = {
+						attributes.texcoords[2 * index.texcoord_index + 0],
+						1.0f - attributes.texcoords[2 * index.texcoord_index + 1]
+					};
+
+					float u = attributes.texcoords[2 * index.texcoord_index + 0];
+					float v = attributes.texcoords[2 * index.texcoord_index + 1];
+					v = 1.0f - fmod(v, 1.0f);
+					attribute.texcoord = { u,v };
+					attribute.normal_os = {
+						attributes.normals[3 * index.normal_index + 0],
+						attributes.normals[3 * index.normal_index + 1],
+						attributes.normals[3 * index.normal_index + 2],
+					};
+
+					if (tangents.size() > 0)
+					{
+						attribute.tangent_os = tangents[index.vertex_index];
+					}
+					else
+					{
+						attribute.tangent_os = Vec4f(1.0f, 0.0f, 0.0f, 1.0f);
+					}
+					attributes_.push_back(attribute);
+				}
+				face_id += 3;
+				vertex_number_ += 3;
+				face_number_ += 1;
+			}
+		}
+
+
+	}
+}
 
 Model::Model(std::vector<Vec3f>& vertex, const std::vector<int>& index)
 {

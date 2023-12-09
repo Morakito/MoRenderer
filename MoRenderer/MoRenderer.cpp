@@ -120,7 +120,6 @@ int MoRenderer::ClipWithPlane(ClipPlane clip_plane, Vertex vertex[3])
 		}
 	}
 
-	assert(out_vertex_count <= 4);
 	return  out_vertex_count;
 }
 
@@ -164,16 +163,17 @@ void MoRenderer::Init(const int width, const int height)
 		depth_buffer_[j] = new float[width];
 	}
 
-	ClearFrameBuffer();
+	ClearFrameBuffer(true, true);
 }
 
-void MoRenderer::ClearFrameBuffer() const
+void MoRenderer::ClearFrameBuffer(bool clear_color_buffer, bool clear_depth_buffer) const
 {
-	const ColorRGBA32Bit color_32_bit = vector_to_32bit_color(color_background_);
-	if (color_buffer_) {
+	if (clear_color_buffer && color_buffer_)
+	{
+		const ColorRGBA32Bit color_32_bit = vector_to_32bit_color(color_background_);
+
 		for (int j = 0; j < frame_buffer_height_; j++) {
 			const int offset = frame_buffer_width_ * (4 * j);
-
 			for (int i = 0; i < frame_buffer_width_; i++)
 			{
 				const int base_address = offset + 4 * i;
@@ -184,9 +184,10 @@ void MoRenderer::ClearFrameBuffer() const
 				color_buffer_[base_address + 3] = color_32_bit.a;
 			}
 		}
+
 	}
 
-	if (depth_buffer_) {
+	if (clear_depth_buffer && depth_buffer_) {
 		for (int j = 0; j < frame_buffer_height_; j++) {
 			for (int i = 0; i < frame_buffer_width_; i++)
 				depth_buffer_[j][i] = 0.0f;
@@ -326,21 +327,11 @@ void MoRenderer::DrawSkybox()
 		vertex_[k].position = vertex_shader_(k, vertex_[k].context);
 	}
 
-	Vertex clip_vertex[3] = { vertex_[0], vertex_[1], vertex_[2] };
-
 	// 执行后续顶点处理
 	for (int k = 0; k < 3; k++) {
-		auto& [has_transformed, context, w_reciprocal, position, screen_position_f, screen_position_i] = clip_vertex[k];
-
-		if (has_transformed)return;
-		has_transformed = true;
+		auto& [has_transformed, context, w_reciprocal, position, screen_position_f, screen_position_i] = vertex_[k];
 
 		// 透视除法
-		if (NearEqual(position.w, 0.0f, kEpsilon))
-		{
-			position.w = position.w > 0 ? kEpsilon : -kEpsilon;
-		}
-
 		w_reciprocal = 1.0f / position.w;
 		position *= w_reciprocal;
 
@@ -357,7 +348,7 @@ void MoRenderer::DrawSkybox()
 		screen_position_f.y = screen_position_i.y + 0.5f;
 	}
 
-	RasterizeTriangle(clip_vertex);
+	RasterizeTriangle(vertex_);
 }
 
 void MoRenderer::DrawMesh() {
@@ -365,6 +356,11 @@ void MoRenderer::DrawMesh() {
 
 	// 顶点变换
 	for (int k = 0; k < 3; k++) {
+		vertex_[k].context.varying_float.clear();
+		vertex_[k].context.varying_vec2f.clear();
+		vertex_[k].context.varying_vec3f.clear();
+		vertex_[k].context.varying_vec4f.clear();
+
 		// 执行顶点着色程序，返回裁剪空间中的顶点坐标，此时没有进行透视除法
 		vertex_[k].position = vertex_shader_(k, vertex_[k].context);
 		vertex_[k].has_transformed = false;
@@ -385,16 +381,30 @@ void MoRenderer::DrawMesh() {
 	const Vec4f normal = vector_cross(vector_01, vector_02);
 	if (normal.z <= 0) return;
 
-	// 在裁剪空间中，针对近裁剪平面进行clip
-	const int out_vertex_count = ClipWithPlane(Z_Near, vertex_);
+	int out_vertex_count = 0;
+	if (IsInsidePlane(Z_Near, vertex_[0].position) &&
+		IsInsidePlane(Z_Near, vertex_[1].position) &&
+		IsInsidePlane(Z_Near, vertex_[2].position))
+	{
+		out_vertex_count = 3;
+		clip_vertex_[0] = vertex_[0];
+		clip_vertex_[1] = vertex_[1];
+		clip_vertex_[2] = vertex_[2];
+	}
+	else
+	{	// 在裁剪空间中，针对近裁剪平面进行clip
+		out_vertex_count = ClipWithPlane(Z_Near, vertex_);
+	}
+
+
 
 	for (int i = 0; i < out_vertex_count - 2; i++)
 	{
-		Vertex clip_vertex[3] = { clip_vertex_[0], clip_vertex_[i + 1], clip_vertex_[i + 2] };
+		Vertex raster_vertex[3] = { clip_vertex_[0], clip_vertex_[i + 1], clip_vertex_[i + 2] };
 
 		// 执行后续顶点处理
 		for (int k = 0; k < 3; k++) {
-			auto& [has_transformed, context, w_reciprocal, position, screen_position_f, screen_position_i] = clip_vertex[k];
+			auto& [has_transformed, context, w_reciprocal, position, screen_position_f, screen_position_i] = raster_vertex[k];
 
 			if (has_transformed)continue;
 			has_transformed = true;
@@ -417,7 +427,7 @@ void MoRenderer::DrawMesh() {
 
 		}
 
-		RasterizeTriangle(clip_vertex);
+		RasterizeTriangle(raster_vertex);
 	}
 
 }
@@ -451,13 +461,12 @@ void MoRenderer::RasterizeTriangle(Vertex vertex[3])
 	}
 
 	// 保存三个端点位置
-
-	Vec2f p0 = Vec2f(vertex[0].screen_position_i.x, vertex[0].screen_position_i.y);
-	Vec2f p1 = Vec2f(vertex[1].screen_position_i.x, vertex[1].screen_position_i.y);
-	Vec2f p2 = Vec2f(vertex[2].screen_position_i.x, vertex[2].screen_position_i.y);
+	Vec2i p0 = vertex[0].screen_position_i;
+	Vec2i p1 = vertex[1].screen_position_i;
+	Vec2i p2 = vertex[2].screen_position_i;
 
 	// 构建边缘方程
-	Vec2f bottom_left_point = { static_cast<float>(bounding_min.x) ,static_cast<float>(bounding_min.y) };
+	Vec2i bottom_left_point = bounding_min;
 	edge_equation_[0].Initialize(p1, p2, bottom_left_point, vertex[0].w_reciprocal);
 	edge_equation_[1].Initialize(p2, p0, bottom_left_point, vertex[1].w_reciprocal);
 	edge_equation_[2].Initialize(p0, p1, bottom_left_point, vertex[2].w_reciprocal);
@@ -514,32 +523,42 @@ void MoRenderer::RasterizeTriangle(Vertex vertex[3])
 			Varings& context_p2 = vertex[2].context;
 
 			// 插值各项 varying
-			for (const auto& key : context_p0.varying_float | std::views::keys) {
-				float f0 = context_p0.varying_float[key];
-				float f1 = context_p1.varying_float[key];
-				float f2 = context_p2.varying_float[key];
-				current_varings_.varying_float[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
+			if (!context_p0.varying_float.empty()) {
+				for (const auto& key : context_p0.varying_float | std::views::keys) {
+					float f0 = context_p0.varying_float[key];
+					float f1 = context_p1.varying_float[key];
+					float f2 = context_p2.varying_float[key];
+					current_varings_.varying_float[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
+				}
 			}
 
-			for (const auto& key : context_p0.varying_vec2f | std::views::keys) {
-				const Vec2f& f0 = context_p0.varying_vec2f[key];
-				const Vec2f& f1 = context_p1.varying_vec2f[key];
-				const Vec2f& f2 = context_p2.varying_vec2f[key];
-				current_varings_.varying_vec2f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
+			if (!context_p0.varying_vec2f.empty()) {
+				for (const auto& key : context_p0.varying_vec2f | std::views::keys) {
+					const Vec2f& f0 = context_p0.varying_vec2f[key];
+					const Vec2f& f1 = context_p1.varying_vec2f[key];
+					const Vec2f& f2 = context_p2.varying_vec2f[key];
+					current_varings_.varying_vec2f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
+				}
 			}
 
-			for (const auto& key : context_p0.varying_vec3f | std::views::keys) {
-				const Vec3f& f0 = context_p0.varying_vec3f[key];
-				const Vec3f& f1 = context_p1.varying_vec3f[key];
-				const Vec3f& f2 = context_p2.varying_vec3f[key];
-				current_varings_.varying_vec3f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
+
+			if (!context_p0.varying_vec3f.empty()) {
+				for (const auto& key : context_p0.varying_vec3f | std::views::keys) {
+					const Vec3f& f0 = context_p0.varying_vec3f[key];
+					const Vec3f& f1 = context_p1.varying_vec3f[key];
+					const Vec3f& f2 = context_p2.varying_vec3f[key];
+					current_varings_.varying_vec3f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
+				}
 			}
 
-			for (const auto& key : context_p0.varying_vec4f | std::views::keys) {
-				const Vec4f& f0 = context_p0.varying_vec4f[key];
-				const Vec4f& f1 = context_p1.varying_vec4f[key];
-				const Vec4f& f2 = context_p2.varying_vec4f[key];
-				current_varings_.varying_vec4f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
+
+			if (!context_p0.varying_vec4f.empty()) {
+				for (const auto& key : context_p0.varying_vec4f | std::views::keys) {
+					const Vec4f& f0 = context_p0.varying_vec4f[key];
+					const Vec4f& f1 = context_p1.varying_vec4f[key];
+					const Vec4f& f2 = context_p2.varying_vec4f[key];
+					current_varings_.varying_vec4f[key] = bc_correct_p0 * f0 + bc_correct_p1 * f1 + bc_correct_p2 * f2;
+				}
 			}
 
 			// 执行像素着色器

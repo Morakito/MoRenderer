@@ -207,12 +207,16 @@ Vec4f PBRShader::VertexShaderFunction(int index, Varings& output) const
 	Vec4f position_cs = uniform_buffer_->mvp_matrix * attributes_[index].position_os.xyz1();
 	const Vec3f position_ws = (uniform_buffer_->model_matrix * attributes_[index].position_os.xyz1()).xyz();
 	const Vec3f normal_ws = (uniform_buffer_->normal_matrix * attributes_[index].normal_os.xyz1()).xyz();
-	const Vec4f tangent_ws = uniform_buffer_->model_matrix * attributes_[index].tangent_os;
+	if (model_->has_tangent_)
+	{
+		const Vec4f tangent_ws = uniform_buffer_->model_matrix * attributes_[index].tangent_os;
+		output.varying_vec4f[VARYING_TANGENT_WS] = tangent_ws;
+	}
+
 
 	output.varying_vec2f[VARYING_TEXCOORD] = attributes_[index].texcoord;
 	output.varying_vec3f[VARYING_POSITION_WS] = position_ws;
 	output.varying_vec3f[VARYING_NORMAL_WS] = normal_ws;
-	output.varying_vec4f[VARYING_TANGENT_WS] = tangent_ws;
 	return position_cs;
 }
 
@@ -222,7 +226,7 @@ Vec4f PBRShader::PixelShaderFunction(Varings& input) const
 	Vec3f position_ws = input.varying_vec3f[VARYING_POSITION_WS];		// 世界空间坐标
 
 	Vec3f normal_ws = input.varying_vec3f[VARYING_NORMAL_WS];			// 法线
-	if (model_->normal_map_->has_data_)
+	if (model_->normal_map_->has_data_ && model_->has_tangent_)
 	{
 		Vec4f tangent_ws = input.varying_vec4f[VARYING_TANGENT_WS];
 		Vec3f perturb_normal = (model_->normal_map_->Sample2D(uv)).xyz();

@@ -28,6 +28,7 @@ public:
 
 private:
 	void LoadModel(const std::string& model_name);
+	void LoadModelByTinyObj(const std::string& model_name);
 
 public:
 	static std::string GetTextureType(TextureType texture_type);
@@ -48,6 +49,8 @@ public:
 	Texture* metallic_map_;
 	Texture* occlusion_map_;
 	Texture* emission_map_;
+
+	bool has_tangent_;
 };
 
 #endif

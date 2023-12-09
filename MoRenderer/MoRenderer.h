@@ -31,7 +31,7 @@ public:
 	void CleanUp();
 
 	// 清空 frame buffer
-	void ClearFrameBuffer() const;
+	void ClearFrameBuffer(bool clear_color_buffer, bool clear_depth_buffer) const;
 
 	// 设置 VS/PS 着色器函数
 	void SetVertexShader(const VertexShader& vs) { vertex_shader_ = vs; }
@@ -85,7 +85,7 @@ public:
 
 		float w_reciprocal;	// 对顶点w分量的倒数
 
-		void Initialize(const Vec2f& p0, const Vec2f& p1, const Vec2f& bottom_left_point, float w_reciprocal)
+		void Initialize(const Vec2i& p0, const Vec2i& p1, const Vec2i& bottom_left_point, float w_reciprocal)
 		{
 			// 详见RTR4 方程23.2
 			a = -(p1.y - p0.y);
@@ -164,8 +164,9 @@ public:
 	bool render_pixel_;				// 是否填充像素
 
 	// 渲染中使用的临时数据
-	Vertex vertex_[3];				// 三角形的顶点
-	Vertex clip_vertex_[4];			// 三角形的顶点
+	Vertex vertex_[3];				// 三角形的输入顶点
+	Vertex clip_vertex_[4];			// 经过clip之后的顶点
+
 	EdgeEquation edge_equation_[3];
 	Varings current_varings_;
 
