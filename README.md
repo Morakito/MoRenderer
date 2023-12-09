@@ -1,8 +1,9 @@
 # MoRenderer
 
-MoRenderer is a software rasterization renderer based on c++11. The main purpose of the project is to learn the principles of rendering. Currently only Windows is supported (uses win32 to display window and image)
+MoRenderer is a software rasterization renderer based on c++11. The main purpose of the project is to learn the principles of modern rendering. Currently only Windows is supported (uses win32 to display window and image)
 
-<img src="images/helmet.png" width="410">
+<img src="images/PBR-Material-Inspector.gif" width="400">
+<img src="images/Switch-Rendering-Mode.gif" width="400">
 
 ## Feature
 
@@ -26,12 +27,14 @@ MoRenderer is a software rasterization renderer based on c++11. The main purpose
     -   use Top-Left rule to handle boundary pixels
 -   texture sampling
     -   use bilinear interpolation to get better texture effect
+    -   cubemap sampling
 -   orbital camera controls
     - Orbit
     - Pan
     - Zoom
     - Reset
 -   tangent space normal mapping
+-   ACES tone mapping
 -   shading model
     -   Blinn-Phong shading
     -   Physically Based Shading (use Cook-torrance BRDF)
@@ -39,10 +42,17 @@ MoRenderer is a software rasterization renderer based on c++11. The main purpose
     -   use keyboard number to switch material inspector
     -   Blinn-Phong material inspector
     -   Physically Based Shading material inspector
+    -   wireframe rendering
 -   image-based lighting (IBL)
     -   irradiance map
     -   prefilter specular environment map
--   ACES tone mapping
+    -   use cmgen to automatic generate the IBL resource
+-   skybox 
+    -   place a plane on the far clipping plane
+    -   switch the skybox at runtime
+-   other control
+    -   switch the shading model at runtime
+    -   switch the model at runtime
 
 ## Build
 
@@ -74,9 +84,33 @@ start Renderer.sln
 -   Switch model: keyboard up/down
 -   Switch skybox: keyboard left/right
 
+## Previews
+
+### Camera Control
+![](images/Camera-Control.gif)
+
+### PBR Material Inspector
+![](images/PBR-Material-Inspector.gif)
+
+### Blinn-Phong Material Inspector
+![](images/Blinn-Phong-Material-Inspector.gif)
+
+### Switch Rendering Mode
+![](images/Switch-Rendering-Mode.gif)
+
+### Switch Assets
+![](images/Switch-Assets.gif)
+
+### Wireframe && Clip && Skybox
+![](images/Wireframe-Clip-Skybox.gif)
+
 ## Reference
 
+[filament](https://github.com/google/filament "filament")
+
 [stb_image.h](https://github.com/nothings/stb "stb_image")
+
+[tiny_obj_loader.h](https://github.com/tinyobjloader/tinyobjloader "tiny_obj_loader")
 
 skywind3000's implementation of [software renderer](https://github.com/skywind3000/RenderHelp "software renderer")
 
