@@ -54,6 +54,31 @@ MoRenderer is a software rasterization renderer based on c++11. The main purpose
     -   switch the shading model at runtime
     -   switch the model at runtime
 
+
+## Previews
+
+### Camera Control
+![](images/Camera-Control.gif)
+
+### PBR Material Inspector
+![](images/PBR-Material-Inspector.gif)
+
+### Blinn-Phong Material Inspector
+![](images/Blinn-Phong-Material-Inspector.gif)
+
+### Switch Rendering Mode
+![](images/Switch-Rendering-Mode.gif)
+
+### Switch Assets
+![](images/Switch-Assets.gif)
+
+### Wireframe && Clip && Skybox
+![](images/Wireframe-Clip-Skybox.gif)
+
+## Binary file
+You can find “MoRenderer.exe” in the bin/ folder. Keep the relative file path of the exe file as it will use files in tools/ and /assets/.
+It may take a while to run the first time because cmgen is used to generate ibl resources.
+
 ## Build
 
 A CMakeLists.txt file is provided for generating project files using CMake
@@ -84,25 +109,6 @@ start Renderer.sln
 -   Switch model: keyboard up/down
 -   Switch skybox: keyboard left/right
 
-## Previews
-
-### Camera Control
-![](images/Camera-Control.gif)
-
-### PBR Material Inspector
-![](images/PBR-Material-Inspector.gif)
-
-### Blinn-Phong Material Inspector
-![](images/Blinn-Phong-Material-Inspector.gif)
-
-### Switch Rendering Mode
-![](images/Switch-Rendering-Mode.gif)
-
-### Switch Assets
-![](images/Switch-Assets.gif)
-
-### Wireframe && Clip && Skybox
-![](images/Wireframe-Clip-Skybox.gif)
 
 ## Reference
 
