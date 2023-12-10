@@ -75,10 +75,6 @@ MoRenderer is a software rasterization renderer based on c++11. The main purpose
 ### Wireframe && Clip && Skybox
 ![](images/Wireframe-Clip-Skybox.gif)
 
-## Binary file
-You can find “MoRenderer.exe” in the bin/ folder. Keep the relative file path of the exe file as it will use files in tools/ and /assets/.
-It may take a while to run the first time because cmgen is used to generate ibl resources.
-
 ## Build
 
 A CMakeLists.txt file is provided for generating project files using CMake
