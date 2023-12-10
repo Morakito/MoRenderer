@@ -1,6 +1,6 @@
 # MoRenderer
 
-MoRenderer is a software rasterization renderer based on c++11. The main purpose of the project is to learn the principles of modern rendering. Currently only Windows is supported (uses win32 to display window and image)
+MoRenderer is a software rasterization renderer based on c++ 20. The main purpose of the project is to learn the principles of modern rendering. Currently only Windows is supported (uses win32 to display window and image)
 
 <img src="images/PBR-Material-Inspector.gif" width="400">
 <img src="images/Switch-Rendering-Mode.gif" width="400">
