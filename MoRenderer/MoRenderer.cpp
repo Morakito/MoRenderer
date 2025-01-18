@@ -480,10 +480,11 @@ void MoRenderer::RasterizeTriangle(Vertex* vertex[3])
 			Vec2i offset = { x - bounding_min.x, y - bounding_min.y };
 
 			// 判断点(x,y)是否位于三角形内部或者三角形边缘
-			// 当属于上边缘或者左边缘的时候，将e与1进行比较，从而跳过e=0的情况
+			// 左上边：e >= 0，若e < 0即跳过
+			// 右下边：e > 0，将e <= 0转换为e < 1
 			float e0 = edge_equation_[0].Evaluate(offset.x, offset.y);
 			if (e0 < (edge_equation_[0].is_top_left ? 0 : 1)) continue;
-
+			
 			float e1 = edge_equation_[1].Evaluate(offset.x, offset.y);
 			if (e1 < (edge_equation_[1].is_top_left ? 0 : 1)) continue;
 

@@ -103,7 +103,7 @@ public:
 			 * 左边缘：边缘方程中的a>0
 			 *
 			 */
-			is_top_left = (NearEqual(a, 0.0f, 0.00001f) && b > 0) || a > 0;
+			is_top_left = (NearEqual(a, 0.0f, 0.00001f) && b < 0) || a > 0;
 
 			this->w_reciprocal = w_reciprocal;
 		}
